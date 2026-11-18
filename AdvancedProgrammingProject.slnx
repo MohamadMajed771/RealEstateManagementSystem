@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="PropertyTransferManagement/PropertyTransferManagement.csproj" />
+  <Project Path="RealEstateMarketplace/RealEstateMarketplace.csproj" />
+  <Project Path="SharedContracts/SharedContracts.csproj" />
+</Solution>

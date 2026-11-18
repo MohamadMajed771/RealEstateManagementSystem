@@ -1,0 +1,48 @@
+﻿
+@page
+@model RealEstateMarketplace.Areas.Identity.Pages.Account.RegisterConfirmationModel
+
+@{
+    ViewData["Title"] = "Check Your Email";
+}
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+
+            <div class="card shadow-sm">
+                <div class="card-body p-4 text-center">
+
+                    <h2 class="mb-3">
+                        Check Your Email
+                    </h2>
+
+                    <p>
+                        Your account has been created.
+                    </p>
+
+                    <p>
+                        We have sent a confirmation link to:
+                    </p>
+
+                    <p class="fw-bold">
+                        @Model.Email
+                    </p>
+
+                    <p class="text-muted">
+                        Please open your email and click the
+                        confirmation link to activate your account.
+                    </p>
+
+                    <a asp-area="Identity"
+                       asp-page="/Account/Login"
+                       class="btn btn-primary">
+                        Go to Login
+                    </a>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
