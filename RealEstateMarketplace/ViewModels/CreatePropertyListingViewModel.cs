@@ -1,4 +1,5 @@
 ﻿
+using Microsoft.AspNetCore.Http;
 using System.ComponentModel.DataAnnotations;
 using RealEstateMarketplace.Models;
 
@@ -6,7 +7,9 @@ namespace RealEstateMarketplace.ViewModels
 {
     public class CreatePropertyListingViewModel
     {
-        // Property information
+        // ==========================================
+        // PROPERTY INFORMATION
+        // ==========================================
 
         [Required(ErrorMessage = "Property type is required.")]
         [EnumDataType(typeof(PropertyType))]
@@ -40,19 +43,25 @@ namespace RealEstateMarketplace.ViewModels
         [Range(0, 1000)]
         public int? Bathrooms { get; set; }
 
+        // ==========================================
+        // PROPERTY LOCATION (MAP)
+        // ==========================================
 
-        [Required(ErrorMessage = "Please select the property location on the map.")]
+        [Required(ErrorMessage =
+            "Please select the property location on the map.")]
         [Range(typeof(decimal), "-90", "90",
             ErrorMessage = "Invalid latitude.")]
         public decimal? Latitude { get; set; }
 
-        [Required(ErrorMessage = "Please select the property location on the map.")]
+        [Required(ErrorMessage =
+            "Please select the property location on the map.")]
         [Range(typeof(decimal), "-180", "180",
             ErrorMessage = "Invalid longitude.")]
         public decimal? Longitude { get; set; }
 
-
-        // Listing information
+        // ==========================================
+        // LISTING INFORMATION
+        // ==========================================
 
         [Required(ErrorMessage = "Listing title is required.")]
         [StringLength(150, MinimumLength = 5)]
@@ -71,12 +80,17 @@ namespace RealEstateMarketplace.ViewModels
         [Range(typeof(decimal), "0.01", "999999999999.99")]
         public decimal? Price { get; set; }
 
-
         [Required(ErrorMessage = "Please select a currency.")]
         [RegularExpression("^(USD|EUR|LBP)$",
             ErrorMessage = "Please select a valid currency.")]
         [Display(Name = "Currency")]
         public string Currency { get; set; } = "USD";
 
+        // ==========================================
+        // PROPERTY PHOTOS
+        // ==========================================
+
+        [Display(Name = "Property Photos")]
+        public List<IFormFile> Photos { get; set; } = new();
     }
 }

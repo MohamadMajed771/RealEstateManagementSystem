@@ -1,31 +1,65 @@
-﻿@model RealEstateMarketplace.ViewModels.EditPropertyListingViewModel
+﻿
+@model RealEstateMarketplace.ViewModels.EditPropertyListingViewModel
+
 @{
     ViewData["Title"] = "Edit Property Listing";
+    var existingPhotos = Model.ExistingPhotos
+        ?? new List<RealEstateMarketplace.Models.PropertyPhoto>();
 }
 
 <link rel="stylesheet"
       href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
+<style>
+    .existing-photo-card {
+        border: 1px solid #dee2e6;
+        border-radius: 10px;
+        padding: 12px;
+        height: 100%;
+        background: #fff;
+    }
+
+    .existing-photo-card img,
+    .new-photo-preview img {
+        width: 100%;
+        height: 160px;
+        object-fit: cover;
+        border-radius: 7px;
+    }
+
+    .existing-photo-card.marked-for-deletion {
+        opacity: 0.5;
+        border-color: #dc3545;
+    }
+
+    .new-photo-preview {
+        border: 1px solid #dee2e6;
+        border-radius: 10px;
+        padding: 10px;
+    }
+</style>
+
 <div class="container mt-5 mb-5">
     <div class="row justify-content-center">
         <div class="col-lg-9">
             <div class="card shadow-sm">
+
                 <div class="card-header bg-primary text-white">
-                    <h3 class="mb-0">Create Property Listing</h3>
+                    <h3 class="mb-0">Edit Property Listing</h3>
                 </div>
 
                 <div class="card-body p-4">
-                    
+
                     <form asp-controller="PropertyListings"
                           asp-action="Edit"
                           asp-route-id="@Model.Id"
-                          method="post">
+                          method="post"
+                          enctype="multipart/form-data"
+                          id="editListingForm">
 
                         @Html.AntiForgeryToken()
+
                         <input asp-for="Id" type="hidden" />
-
-
-                        @Html.AntiForgeryToken()
 
                         <div asp-validation-summary="ModelOnly"
                              class="text-danger mb-3"></div>
@@ -36,11 +70,13 @@
                             <div class="col-md-6 mb-3">
                                 <label asp-for="Type"
                                        class="form-label"></label>
+
                                 <select asp-for="Type"
                                         asp-items="Html.GetEnumSelectList<RealEstateMarketplace.Models.PropertyType>()"
                                         class="form-select">
                                     <option value="">Select property type</option>
                                 </select>
+
                                 <span asp-validation-for="Type"
                                       class="text-danger"></span>
                             </div>
@@ -48,17 +84,20 @@
                             <div class="col-md-6 mb-3">
                                 <label asp-for="ListingType"
                                        class="form-label"></label>
+
                                 <select asp-for="ListingType"
                                         asp-items="Html.GetEnumSelectList<RealEstateMarketplace.Models.ListingType>()"
                                         class="form-select">
                                     <option value="">Select sale or rent</option>
                                 </select>
+
                                 <span asp-validation-for="ListingType"
                                       class="text-danger"></span>
                             </div>
                         </div>
 
                         <h5 class="mt-3 mb-2">Property Address</h5>
+
                         <p class="text-muted">
                             Enter an address to find it on the map,
                             or select a location directly on the map
@@ -69,8 +108,10 @@
                             <div class="col-md-4 mb-3">
                                 <label asp-for="Country"
                                        class="form-label"></label>
+
                                 <input asp-for="Country"
                                        class="form-control" />
+
                                 <span asp-validation-for="Country"
                                       class="text-danger"></span>
                             </div>
@@ -78,8 +119,10 @@
                             <div class="col-md-4 mb-3">
                                 <label asp-for="City"
                                        class="form-label"></label>
+
                                 <input asp-for="City"
                                        class="form-control" />
+
                                 <span asp-validation-for="City"
                                       class="text-danger"></span>
                             </div>
@@ -87,8 +130,10 @@
                             <div class="col-md-4 mb-3">
                                 <label asp-for="Area"
                                        class="form-label"></label>
+
                                 <input asp-for="Area"
                                        class="form-control" />
+
                                 <span asp-validation-for="Area"
                                       class="text-danger"></span>
                             </div>
@@ -97,8 +142,10 @@
                         <div class="mb-3">
                             <label asp-for="StreetAddress"
                                    class="form-label"></label>
+
                             <input asp-for="StreetAddress"
                                    class="form-control" />
+
                             <span asp-validation-for="StreetAddress"
                                   class="text-danger"></span>
                         </div>
@@ -117,6 +164,7 @@
                         </div>
 
                         <h5 class="mb-2">Select Property Location</h5>
+
                         <p class="text-muted">
                             Click the exact property location on the map.
                             You can drag the marker to adjust it.
@@ -124,11 +172,11 @@
 
                         <div id="propertyMap"
                              style="height:450px;
-                            width:100%;
-                            border:1px solid #dee2e6;
-                            border-radius:8px;
-                            overflow:hidden;
-                            position:relative;">
+                                    width:100%;
+                                    border:1px solid #dee2e6;
+                                    border-radius:8px;
+                                    overflow:hidden;
+                                    position:relative;">
                         </div>
 
                         <input asp-for="Latitude" type="hidden" />
@@ -136,6 +184,7 @@
 
                         <span asp-validation-for="Latitude"
                               class="text-danger d-block"></span>
+
                         <span asp-validation-for="Longitude"
                               class="text-danger d-block"></span>
 
@@ -154,11 +203,13 @@
                             <div class="col-md-4 mb-3">
                                 <label asp-for="SizeSquareMeters"
                                        class="form-label"></label>
+
                                 <input asp-for="SizeSquareMeters"
                                        type="number"
                                        step="0.01"
                                        min="0.01"
                                        class="form-control" />
+
                                 <span asp-validation-for="SizeSquareMeters"
                                       class="text-danger"></span>
                             </div>
@@ -166,10 +217,12 @@
                             <div class="col-md-4 mb-3">
                                 <label asp-for="Bedrooms"
                                        class="form-label"></label>
+
                                 <input asp-for="Bedrooms"
                                        type="number"
                                        min="0"
                                        class="form-control" />
+
                                 <span asp-validation-for="Bedrooms"
                                       class="text-danger"></span>
                             </div>
@@ -177,10 +230,12 @@
                             <div class="col-md-4 mb-3">
                                 <label asp-for="Bathrooms"
                                        class="form-label"></label>
+
                                 <input asp-for="Bathrooms"
                                        type="number"
                                        min="0"
                                        class="form-control" />
+
                                 <span asp-validation-for="Bathrooms"
                                       class="text-danger"></span>
                             </div>
@@ -193,9 +248,11 @@
                         <div class="mb-3">
                             <label asp-for="Title"
                                    class="form-label"></label>
+
                             <input asp-for="Title"
                                    class="form-control"
                                    placeholder="Example: Modern apartment in Beirut" />
+
                             <span asp-validation-for="Title"
                                   class="text-danger"></span>
                         </div>
@@ -203,9 +260,11 @@
                         <div class="mb-3">
                             <label asp-for="Description"
                                    class="form-label"></label>
+
                             <textarea asp-for="Description"
                                       class="form-control"
                                       rows="5"></textarea>
+
                             <span asp-validation-for="Description"
                                   class="text-danger"></span>
                         </div>
@@ -214,11 +273,13 @@
                             <div class="col-md-6 mb-3">
                                 <label asp-for="Price"
                                        class="form-label"></label>
+
                                 <input asp-for="Price"
                                        type="number"
                                        step="0.01"
                                        min="0.01"
                                        class="form-control" />
+
                                 <span asp-validation-for="Price"
                                       class="text-danger"></span>
                             </div>
@@ -226,25 +287,147 @@
                             <div class="col-md-6 mb-3">
                                 <label asp-for="Currency"
                                        class="form-label"></label>
+
                                 <select asp-for="Currency"
                                         class="form-select">
                                     <option value="USD">USD</option>
                                     <option value="EUR">EUR</option>
                                     <option value="LBP">LBP</option>
                                 </select>
+
                                 <span asp-validation-for="Currency"
                                       class="text-danger"></span>
                             </div>
                         </div>
 
+                        <hr class="my-4" />
+
+                        <!-- EXISTING PHOTOS -->
+
+                        <h5 class="mb-2">Manage Property Photos</h5>
+
+                        <p class="text-muted">
+                            Choose the cover photo, select photos to remove,
+                            or upload additional images. Changes will be
+                            applied when you save the listing.
+                        </p>
+
+                        <h6 class="mb-3">
+                            Existing Photos
+                            (<span id="existingPhotoCount">@existingPhotos.Count</span>)
+                        </h6>
+
+                        @if (existingPhotos.Any())
+                        {
+                            <div class="row g-3 mb-4"
+                                 id="existingPhotosContainer">
+
+                                @foreach (var photo in existingPhotos)
+                                {
+                                    var isSelectedForDeletion =
+                                        Model.PhotoIdsToDelete?.Contains(photo.Id)
+                                        == true;
+
+                                    <div class="col-md-4 col-sm-6">
+                                        <div class="existing-photo-card @(isSelectedForDeletion ? "marked-for-deletion" : "")"
+                                             data-photo-id="@photo.Id">
+
+                                            <img src="@photo.ImagePath"
+                                                 alt="Property photo"
+                                                 loading="lazy" />
+
+                                            <div class="form-check mt-3">
+                                                <input class="form-check-input cover-photo-radio"
+                                                       type="radio"
+                                                       name="CoverPhotoId"
+                                                       value="@photo.Id"
+                                                       id="coverPhoto_@photo.Id"
+                                                       checked="@(Model.CoverPhotoId == photo.Id)"
+                                                       disabled="@isSelectedForDeletion" />
+
+                                                <label class="form-check-label"
+                                                       for="coverPhoto_@photo.Id">
+                                                    Cover Photo
+                                                </label>
+                                            </div>
+
+                                            <div class="form-check mt-2">
+                                                <input class="form-check-input delete-photo-checkbox"
+                                                       type="checkbox"
+                                                       name="PhotoIdsToDelete"
+                                                       value="@photo.Id"
+                                                       id="deletePhoto_@photo.Id"
+                                                       checked="@isSelectedForDeletion" />
+
+                                                <label class="form-check-label text-danger"
+                                                       for="deletePhoto_@photo.Id">
+                                                    Delete Photo
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="alert alert-secondary">
+                                This listing has no photos yet.
+                            </div>
+                        }
+
+                        <span asp-validation-for="PhotoIdsToDelete"
+                              class="text-danger d-block"></span>
+
+                        <span asp-validation-for="CoverPhotoId"
+                              class="text-danger d-block"></span>
+
+                        <!-- ADD NEW PHOTOS -->
+
+                        <h6 class="mb-2">Add New Photos</h6>
+
+                        <div class="mb-3">
+                            <label asp-for="NewPhotos"
+                                   class="form-label"></label>
+
+                            <input asp-for="NewPhotos"
+                                   type="file"
+                                   multiple
+                                   accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                                   class="form-control"
+                                   id="NewPhotos" />
+
+                            <span asp-validation-for="NewPhotos"
+                                  class="text-danger d-block"></span>
+
+                            <div class="form-text">
+                                Maximum 10 photos per listing.
+                                Maximum 5 MB per photo.
+                                Supported formats: JPG, JPEG, PNG, WebP.
+                            </div>
+                        </div>
+
+                        <div id="photoCountMessage"
+                             class="small text-muted mb-3"
+                             role="status"
+                             aria-live="polite"></div>
+
+                        <div id="photoValidationMessage"
+                             class="text-danger mb-3"
+                             role="alert"></div>
+
+                        <div class="row g-3 mb-4"
+                             id="newPhotoPreviewContainer"></div>
+
                         <div class="alert alert-info mt-3">
-                            Your listing will be submitted for approval
+                            Your edited listing will be submitted for approval
                             before it becomes public.
                         </div>
 
                         <div class="d-flex gap-2 mt-4">
                             <button type="submit"
-                                    class="btn btn-success">
+                                    class="btn btn-success"
+                                    id="saveChangesButton">
                                 Save Changes
                             </button>
 
@@ -254,6 +437,7 @@
                                 Cancel
                             </a>
                         </div>
+
                     </form>
                 </div>
             </div>
@@ -269,6 +453,10 @@
     <script>
         document.addEventListener("DOMContentLoaded", function () {
 
+            // ==========================================
+            // PROPERTY MAP
+            // ==========================================
+
             const fields = {
                 country: document.getElementById("Country"),
                 city: document.getElementById("City"),
@@ -282,253 +470,412 @@
             const coordinates = document.getElementById("selectedCoordinates");
             const searchButton = document.getElementById("findOnMapButton");
 
-            if (typeof L === "undefined") {
-                status.textContent = "Map library failed to load.";
-                return;
-            }
+            if (typeof L !== "undefined") {
 
-            const map = L.map("propertyMap").setView(
-                [33.8547, 35.8623], 9
-            );
+                const map = L.map("propertyMap").setView(
+                    [33.8547, 35.8623], 9
+                );
 
-            L.tileLayer(
-                "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-                {
-                    attribution: '&copy; OpenStreetMap contributors',
-                    maxZoom: 19
-                }
-            ).addTo(map);
+                L.tileLayer(
+                    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                    {
+                        attribution: '&copy; OpenStreetMap contributors',
+                        maxZoom: 19
+                    }
+                ).addTo(map);
 
-            let marker = null;
-            let reverseRequestId = 0;
+                let marker = null;
+                let reverseRequestId = 0;
 
-            function revalidate(input) {
-                if (window.jQuery &&
-                    jQuery.validator &&
-                    jQuery.validator.unobtrusive) {
-                    jQuery(input).valid();
-                }
-            }
-
-            function setField(input, value) {
-                input.value = value || "";
-                revalidate(input);
-            }
-
-            function setCoordinates(lat, lng) {
-                if (!marker) {
-                    marker = L.marker([lat, lng], {
-                        draggable: true
-                    }).addTo(map);
-
-                    marker.on("dragend", function () {
-                        const position = marker.getLatLng();
-                        selectLocation(position.lat, position.lng);
-                    });
-                } else {
-                    marker.setLatLng([lat, lng]);
+                function revalidate(input) {
+                    if (window.jQuery &&
+                        jQuery.validator &&
+                        jQuery.validator.unobtrusive) {
+                        jQuery(input).valid();
+                    }
                 }
 
-                fields.latitude.value = lat.toFixed(7);
-                fields.longitude.value = lng.toFixed(7);
+                function setField(input, value) {
+                    input.value = value || "";
+                    revalidate(input);
+                }
 
-                coordinates.textContent =
-                    lat.toFixed(7) + ", " + lng.toFixed(7);
+                function setCoordinates(lat, lng) {
+                    if (!marker) {
+                        marker = L.marker([lat, lng], {
+                            draggable: true
+                        }).addTo(map);
 
-                revalidate(fields.latitude);
-                revalidate(fields.longitude);
-            }
-
-            async function selectLocation(lat, lng) {
-                setCoordinates(lat, lng);
-
-                const requestId = ++reverseRequestId;
-                status.textContent = "Detecting address...";
-
-                try {
-                    const url = new URL(
-                        "https://nominatim.openstreetmap.org/reverse"
-                    );
-
-                    url.searchParams.set("lat", lat);
-                    url.searchParams.set("lon", lng);
-                    url.searchParams.set("format", "json");
-                    url.searchParams.set("addressdetails", "1");
-
-                    const response = await fetch(url);
-
-                    if (!response.ok) {
-                        throw new Error("Address lookup failed.");
+                        marker.on("dragend", function () {
+                            const position = marker.getLatLng();
+                            selectLocation(position.lat, position.lng);
+                        });
+                    } else {
+                        marker.setLatLng([lat, lng]);
                     }
 
-                    const data = await response.json();
+                    fields.latitude.value = lat.toFixed(7);
+                    fields.longitude.value = lng.toFixed(7);
 
-                    if (requestId !== reverseRequestId) return;
+                    coordinates.textContent =
+                        lat.toFixed(7) + ", " + lng.toFixed(7);
 
-                    const address = data.address || {};
-
-                    
-                    console.log("Full Nominatim response:", data);
-                    console.log("Address fields:", address);
-                    console.table(address);
-
-
-                    const city =
-                        address.city ||
-                        address.town ||
-                        address.village ||
-                        address.municipality ||
-                        "";
-
-                    
-                    const area =
-                        address.neighbourhood ||
-                        address.suburb ||
-                        address.quarter ||
-                        address.city_district ||
-                        address.residential ||
-                        address.hamlet ||
-                        address.locality ||
-                        address.isolated_dwelling ||
-                        "";
-
-
-                    const street =
-                        address.road ||
-                        address.pedestrian ||
-                        address.residential ||
-                        "";
-
-                    if (address.country) {
-                        setField(fields.country, address.country);
-                    }
-
-                    if (city) {
-                        setField(fields.city, city);
-                    }
-
-                    
-                    setField(fields.area, area);
-                    setField(fields.street, street);
-
-
-                    status.textContent =
-                        "Address detected. Please verify the fields.";
+                    revalidate(fields.latitude);
+                    revalidate(fields.longitude);
                 }
-                catch (error) {
-                    console.error(error);
-                    if (requestId === reverseRequestId) {
+
+                async function selectLocation(lat, lng) {
+                    setCoordinates(lat, lng);
+
+                    const requestId = ++reverseRequestId;
+                    status.textContent = "Detecting address...";
+
+                    try {
+                        const url = new URL(
+                            "https://nominatim.openstreetmap.org/reverse"
+                        );
+
+                        url.searchParams.set("lat", lat);
+                        url.searchParams.set("lon", lng);
+                        url.searchParams.set("format", "json");
+                        url.searchParams.set("addressdetails", "1");
+
+                        const response = await fetch(url);
+
+                        if (!response.ok) {
+                            throw new Error("Address lookup failed.");
+                        }
+
+                        const data = await response.json();
+
+                        if (requestId !== reverseRequestId) return;
+
+                        const address = data.address || {};
+
+                        const city =
+                            address.city ||
+                            address.town ||
+                            address.village ||
+                            address.municipality ||
+                            "";
+
+                        const area =
+                            address.neighbourhood ||
+                            address.suburb ||
+                            address.quarter ||
+                            address.city_district ||
+                            address.residential ||
+                            address.hamlet ||
+                            address.locality ||
+                            address.isolated_dwelling ||
+                            "";
+
+                        const street =
+                            address.road ||
+                            address.pedestrian ||
+                            address.residential ||
+                            "";
+
+                        if (address.country) {
+                            setField(fields.country, address.country);
+                        }
+
+                        if (city) {
+                            setField(fields.city, city);
+                        }
+
+                        setField(fields.area, area);
+                        setField(fields.street, street);
+
                         status.textContent =
-                            "Location selected. Enter or verify the address manually.";
+                            "Address detected. Please verify the fields.";
+                    }
+                    catch (error) {
+                        console.error(error);
+
+                        if (requestId === reverseRequestId) {
+                            status.textContent =
+                                "Location selected. Enter or verify the address manually.";
+                        }
                     }
                 }
-            }
 
-            map.on("click", function (event) {
-                selectLocation(event.latlng.lat, event.latlng.lng);
-            });
+                map.on("click", function (event) {
+                    selectLocation(event.latlng.lat, event.latlng.lng);
+                });
 
-            searchButton.addEventListener("click", async function () {
-                const country = fields.country.value.trim();
-                const city = fields.city.value.trim();
-                const area = fields.area.value.trim();
-                const street = fields.street.value.trim();
+                searchButton.addEventListener("click", async function () {
+                    const country = fields.country.value.trim();
+                    const city = fields.city.value.trim();
+                    const area = fields.area.value.trim();
+                    const street = fields.street.value.trim();
 
-                if (!country && !city && !area && !street) {
-                    status.textContent = "Enter an address first.";
-                    return;
-                }
-
-                const query = [street, area, city, country]
-                    .filter(Boolean)
-                    .join(", ");
-
-                searchButton.disabled = true;
-                status.textContent = "Searching for address...";
-
-                try {
-                    const url = new URL(
-                        "https://nominatim.openstreetmap.org/search"
-                    );
-
-                    url.searchParams.set("q", query);
-                    url.searchParams.set("format", "json");
-                    url.searchParams.set("limit", "1");
-
-                    const response = await fetch(url);
-
-                    if (!response.ok) {
-                        throw new Error("Search failed.");
-                    }
-
-                    const results = await response.json();
-
-                    if (results.length === 0) {
-                        status.textContent =
-                            "Address not found. Try a broader search.";
+                    if (!country && !city && !area && !street) {
+                        status.textContent = "Enter an address first.";
                         return;
                     }
 
-                    const result = results[0];
-                    const bounds = result.boundingbox.map(Number);
+                    const query = [street, area, city, country]
+                        .filter(Boolean)
+                        .join(", ");
 
-                    
-                    const lat = parseFloat(result.lat);
-                    const lng = parseFloat(result.lon);
+                    searchButton.disabled = true;
+                    status.textContent = "Searching for address...";
 
-                    let zoomLevel = 9;
+                    try {
+                        const url = new URL(
+                            "https://nominatim.openstreetmap.org/search"
+                        );
 
-                    if (city) {
-                        zoomLevel = 13;
+                        url.searchParams.set("q", query);
+                        url.searchParams.set("format", "json");
+                        url.searchParams.set("limit", "1");
+
+                        const response = await fetch(url);
+
+                        if (!response.ok) {
+                            throw new Error("Search failed.");
+                        }
+
+                        const results = await response.json();
+
+                        if (results.length === 0) {
+                            status.textContent =
+                                "Address not found. Try a broader search.";
+                            return;
+                        }
+
+                        const result = results[0];
+                        const lat = parseFloat(result.lat);
+                        const lng = parseFloat(result.lon);
+
+                        let zoomLevel = 9;
+
+                        if (city) zoomLevel = 13;
+                        if (area) zoomLevel = 15;
+                        if (street) zoomLevel = 17;
+
+                        map.setView([lat, lng], zoomLevel, {
+                            animate: true
+                        });
+
+                        status.textContent =
+                            "Address found. Click the exact property location on the map.";
+                    }
+                    catch (error) {
+                        console.error(error);
+
+                        status.textContent =
+                            "Unable to search right now. Try again.";
+                    }
+                    finally {
+                        searchButton.disabled = false;
+                    }
+                });
+
+                const existingLat = parseFloat(fields.latitude.value);
+                const existingLng = parseFloat(fields.longitude.value);
+
+                if (
+                    fields.latitude.value !== "" &&
+                    fields.longitude.value !== "" &&
+                    Number.isFinite(existingLat) &&
+                    Number.isFinite(existingLng)
+                ) {
+                    setCoordinates(existingLat, existingLng);
+                    map.setView([existingLat, existingLng], 16);
+                }
+
+                setTimeout(function () {
+                    map.invalidateSize();
+                }, 200);
+
+            } else {
+                status.textContent = "Map library failed to load.";
+            }
+
+            // ==========================================
+            // PHOTO MANAGEMENT
+            // ==========================================
+
+            const photoInput = document.getElementById("NewPhotos");
+            const previewContainer =
+                document.getElementById("newPhotoPreviewContainer");
+
+            const photoCountMessage =
+                document.getElementById("photoCountMessage");
+
+            const photoValidationMessage =
+                document.getElementById("photoValidationMessage");
+
+            const deleteCheckboxes =
+                document.querySelectorAll(".delete-photo-checkbox");
+
+            const coverRadios =
+                document.querySelectorAll(".cover-photo-radio");
+
+            const editForm =
+                document.getElementById("editListingForm");
+
+            const maxPhotos = 10;
+            const maxFileSize = 5 * 1024 * 1024;
+
+            const allowedExtensions = [
+                ".jpg", ".jpeg", ".png", ".webp"
+            ];
+
+            function getRemainingExistingCount() {
+                return document.querySelectorAll(
+                    ".existing-photo-card:not(.marked-for-deletion)"
+                ).length;
+            }
+
+            function getSelectedNewFiles() {
+                return Array.from(photoInput.files || []);
+            }
+
+            function getPhotoValidationError() {
+                const files = getSelectedNewFiles();
+                const total = getRemainingExistingCount() + files.length;
+
+                if (total > maxPhotos) {
+                    return "A listing can contain a maximum of 10 photos.";
+                }
+
+                for (const file of files) {
+                    const name = file.name.toLowerCase();
+
+                    const validExtension = allowedExtensions.some(
+                        extension => name.endsWith(extension)
+                    );
+
+                    if (!validExtension) {
+                        return "Only JPG, JPEG, PNG and WebP photos are allowed.";
                     }
 
-                    if (area) {
-                        zoomLevel = 15;
+                    if (file.size === 0 || file.size > maxFileSize) {
+                        return "Each photo must be non-empty and 5 MB or smaller.";
                     }
+                }
 
-                    if (street) {
-                        zoomLevel = 17;
+                return "";
+            }
+
+            function updatePhotoCount() {
+                const existingCount = getRemainingExistingCount();
+                const newCount = getSelectedNewFiles().length;
+                const total = existingCount + newCount;
+
+                photoCountMessage.textContent =
+                    `${existingCount} existing + ${newCount} new = ${total} / ${maxPhotos} photos`;
+
+                const error = getPhotoValidationError();
+                photoValidationMessage.textContent = error;
+
+                return error === "";
+            }
+
+            function updateExistingPhotoSelection() {
+                deleteCheckboxes.forEach(checkbox => {
+                    const card = checkbox.closest(".existing-photo-card");
+                    const radio = card.querySelector(".cover-photo-radio");
+
+                    card.classList.toggle(
+                        "marked-for-deletion",
+                        checkbox.checked
+                    );
+
+                    radio.disabled = checkbox.checked;
+
+                    if (checkbox.checked && radio.checked) {
+                        radio.checked = false;
                     }
+                });
 
-                    map.setView([lat, lng], zoomLevel, {
-                        animate: true
+                // If the cover photo was deleted, automatically
+                // select the first remaining existing photo.
+                const selectedCover = document.querySelector(
+                    ".cover-photo-radio:checked:not(:disabled)"
+                );
+
+                if (!selectedCover) {
+                    const firstAvailable = document.querySelector(
+                        ".cover-photo-radio:not(:disabled)"
+                    );
+
+                    if (firstAvailable) {
+                        firstAvailable.checked = true;
+                    }
+                }
+
+                updatePhotoCount();
+            }
+
+            function renderNewPhotoPreviews() {
+                previewContainer.innerHTML = "";
+
+                const files = getSelectedNewFiles();
+
+                files.forEach((file, index) => {
+                    const column = document.createElement("div");
+                    column.className = "col-md-4 col-sm-6";
+
+                    const card = document.createElement("div");
+                    card.className = "new-photo-preview";
+
+                    const image = document.createElement("img");
+                    image.alt = `New photo ${index + 1}`;
+
+                    const caption = document.createElement("div");
+                    caption.className = "small text-muted mt-2";
+                    caption.textContent = file.name;
+
+                    card.appendChild(image);
+                    card.appendChild(caption);
+                    column.appendChild(card);
+                    previewContainer.appendChild(column);
+
+                    const reader = new FileReader();
+
+                    reader.onload = function (event) {
+                        image.src = event.target.result;
+                    };
+
+                    reader.readAsDataURL(file);
+                });
+
+                updatePhotoCount();
+            }
+
+            deleteCheckboxes.forEach(checkbox => {
+                checkbox.addEventListener(
+                    "change",
+                    updateExistingPhotoSelection
+                );
+            });
+
+            coverRadios.forEach(radio => {
+                radio.addEventListener("change", updatePhotoCount);
+            });
+
+            photoInput.addEventListener(
+                "change",
+                renderNewPhotoPreviews
+            );
+
+            editForm.addEventListener("submit", function (event) {
+                if (!updatePhotoCount()) {
+                    event.preventDefault();
+
+                    photoValidationMessage.scrollIntoView({
+                        behavior: "smooth",
+                        block: "center"
                     });
-
-
-                    status.textContent =
-                        "Address found. Click the exact property location on the map.";
-
-                    // Do not replace the exact marker with
-                    // the approximate search result.
-                }
-                catch (error) {
-                    console.error(error);
-                    status.textContent =
-                        "Unable to search right now. Try again.";
-                }
-                finally {
-                    searchButton.disabled = false;
                 }
             });
 
-            // Restore coordinates after validation errors.
-            const existingLat = parseFloat(fields.latitude.value);
-            const existingLng = parseFloat(fields.longitude.value);
-
-            if (
-                fields.latitude.value !== "" &&
-                fields.longitude.value !== "" &&
-                Number.isFinite(existingLat) &&
-                Number.isFinite(existingLng)
-            ) {
-                setCoordinates(existingLat, existingLng);
-                map.setView([existingLat, existingLng], 16);
-            }
-
-            // Correct map sizing after layout is complete.
-            setTimeout(function () {
-                map.invalidateSize();
-            }, 200);
+            updateExistingPhotoSelection();
+            renderNewPhotoPreviews();
         });
     </script>
 }

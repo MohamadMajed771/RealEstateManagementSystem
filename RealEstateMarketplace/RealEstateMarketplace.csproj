@@ -21,4 +21,8 @@
     <ProjectReference Include="..\SharedContracts\SharedContracts.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="wwwroot\uploads\properties\" />
+  </ItemGroup>
+
 </Project>

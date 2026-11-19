@@ -1,8 +1,14 @@
 ﻿
 @model IEnumerable<RealEstateMarketplace.Models.PropertyListing>
 
+@using RealEstateMarketplace.Models
+
 @{
     ViewData["Title"] = "My Listings";
+
+    var listingPhotos =
+        ViewBag.ListingPhotos as Dictionary<int, List<PropertyPhoto>>
+        ?? new Dictionary<int, List<PropertyPhoto>>();
 }
 
 <div class="container mt-5 mb-5">
@@ -19,8 +25,16 @@
 
     @if (TempData["SuccessMessage"] != null)
     {
-        <div class="alert alert-success">
+        <div class="alert alert-success alert-dismissible fade show"
+             role="alert">
+
             @TempData["SuccessMessage"]
+
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert"
+                    aria-label="Close">
+            </button>
         </div>
     }
 
@@ -34,8 +48,10 @@
     {
         <div class="table-responsive">
             <table class="table table-bordered table-hover align-middle">
+
                 <thead class="table-light">
                     <tr>
+                        <th>Photo</th>
                         <th>Title</th>
                         <th>Property Type</th>
                         <th>Location</th>
@@ -45,33 +61,89 @@
                         <th>Actions</th>
                     </tr>
                 </thead>
+
                 <tbody>
                     @foreach (var listing in Model)
                     {
+                        var photos = listingPhotos.TryGetValue(
+                            listing.Id, out var foundPhotos)
+                            ? foundPhotos
+                            : new List<PropertyPhoto>();
+
+                        var coverPhoto = photos
+                            .FirstOrDefault(p => p.IsCoverPhoto)
+                            ?? photos.FirstOrDefault();
+
                         <tr>
+
+                            <!-- COVER PHOTO -->
+                            <td style="width:140px;">
+
+                                @if (coverPhoto != null)
+                                {
+                                    <button type="button"
+                                            class="border-0 bg-transparent p-0"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#photoModal-@listing.Id"
+                                            aria-label="View photos for @listing.Title">
+
+                                        <img src="@Url.Content(coverPhoto.ImagePath)"
+                                             alt="Cover photo of @listing.Title"
+                                             class="rounded shadow-sm"
+                                             style="width:120px;
+                                                    height:85px;
+                                                    object-fit:cover;
+                                                    cursor:pointer;" />
+                                    </button>
+
+                                    <div class="small text-muted mt-1">
+                                        @photos.Count photo(s)
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="bg-light border rounded
+                                                d-flex align-items-center
+                                                justify-content-center text-muted"
+                                         style="width:120px;height:85px;">
+
+                                        No Photo
+                                    </div>
+                                }
+
+                            </td>
+
+                            <!-- TITLE -->
                             <td>@listing.Title</td>
+
+                            <!-- PROPERTY TYPE -->
                             <td>@listing.Property.Type</td>
+
+                            <!-- LOCATION -->
                             <td>
                                 @listing.Property.Area,
                                 @listing.Property.City,
                                 @listing.Property.Country
                             </td>
+
+                            <!-- PRICE -->
                             <td>
                                 @listing.Price.ToString("N2")
                                 @listing.Currency
                             </td>
-                            <td>
-                                @listing.Status
-                            </td>
+
+                            <!-- STATUS -->
+                            <td>@listing.Status</td>
+
+                            <!-- CREATED DATE -->
                             <td>
                                 @listing.CreatedAt.ToString("yyyy-MM-dd")
                             </td>
-                            
-                            
-                            <td>
-                                <div class="d-flex gap-2">
 
-                                    <!-- Edit button -->
+                            <!-- ACTIONS -->
+                            <td>
+                                <div class="d-flex flex-wrap gap-2">
+
                                     <a asp-controller="PropertyListings"
                                        asp-action="Edit"
                                        asp-route-id="@listing.Id"
@@ -79,7 +151,6 @@
                                         Edit
                                     </a>
 
-                                    <!-- Delete button -->
                                     <form asp-controller="PropertyListings"
                                           asp-action="Delete"
                                           asp-route-id="@listing.Id"
@@ -92,16 +163,242 @@
                                                 class="btn btn-sm btn-outline-danger">
                                             Delete
                                         </button>
+
                                     </form>
 
                                 </div>
                             </td>
-
 
                         </tr>
                     }
                 </tbody>
             </table>
         </div>
+
+        <!-- ======================================
+             PHOTO VIEWER MODALS
+             ====================================== -->
+
+        @foreach (var listing in Model)
+        {
+            if (!listingPhotos.TryGetValue(
+                listing.Id, out var photos) || photos.Count == 0)
+            {
+                continue;
+            }
+
+            var carouselId = $"photoCarousel-{listing.Id}";
+            var modalId = $"photoModal-{listing.Id}";
+
+            <div class="modal fade property-photo-modal"
+                 id="@modalId"
+                 tabindex="-1"
+                 aria-labelledby="photoModalTitle-@listing.Id"
+                 aria-hidden="true">
+
+                <div class="modal-dialog modal-xl modal-dialog-centered">
+
+                    <div class="modal-content bg-dark text-white">
+
+                        <!-- MODAL HEADER -->
+                        <div class="modal-header border-secondary">
+
+                            <h5 class="modal-title"
+                                id="photoModalTitle-@listing.Id">
+                                @listing.Title
+                            </h5>
+
+                            <button type="button"
+                                    class="btn-close btn-close-white"
+                                    data-bs-dismiss="modal"
+                                    aria-label="Close">
+                            </button>
+
+                        </div>
+
+                        <!-- MODAL BODY -->
+                        <div class="modal-body p-2">
+
+                            <div id="@carouselId"
+                                 class="carousel slide"
+                                 data-bs-interval="false"
+                                 data-bs-touch="true"
+                                 data-bs-keyboard="false">
+
+                                <div class="carousel-inner">
+
+                                    @for (int i = 0; i < photos.Count; i++)
+                                    {
+                                        var photo = photos[i];
+
+                                        <div class="carousel-item @(i == 0 ? "active" : "")">
+
+                                            <div class="d-flex align-items-center
+                                                        justify-content-center"
+                                                 style="min-height:300px;">
+
+                                                <img src="@Url.Content(photo.ImagePath)"
+                                                     class="d-block"
+                                                     alt="Photo @(i + 1) of @listing.Title"
+                                                     style="max-width:100%;
+                                                            max-height:75vh;
+                                                            object-fit:contain;" />
+
+                                            </div>
+
+                                            @if (!string.IsNullOrWhiteSpace(photo.Caption))
+                                            {
+                                                <div class="text-center mt-2">
+                                                    @photo.Caption
+                                                </div>
+                                            }
+
+                                        </div>
+                                    }
+
+                                </div>
+
+                                @if (photos.Count > 1)
+                                {
+                                    <!-- PREVIOUS PHOTO -->
+                                    <button class="carousel-control-prev"
+                                            type="button"
+                                            data-bs-target="#@carouselId"
+                                            data-bs-slide="prev"
+                                            aria-label="Previous photo">
+
+                                        <span class="carousel-control-prev-icon"
+                                              aria-hidden="true"></span>
+
+                                    </button>
+
+                                    <!-- NEXT PHOTO -->
+                                    <button class="carousel-control-next"
+                                            type="button"
+                                            data-bs-target="#@carouselId"
+                                            data-bs-slide="next"
+                                            aria-label="Next photo">
+
+                                        <span class="carousel-control-next-icon"
+                                              aria-hidden="true"></span>
+
+                                    </button>
+                                }
+
+                            </div>
+
+                        </div>
+
+                        <!-- MODAL FOOTER -->
+                        <div class="modal-footer border-secondary
+                                    justify-content-between">
+
+                            <span class="photo-counter"
+                                  data-carousel-id="@carouselId">
+                                1 / @photos.Count
+                            </span>
+
+                            <button type="button"
+                                    class="btn btn-outline-light"
+                                    data-bs-dismiss="modal">
+                                Close
+                            </button>
+
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        }
     }
 </div>
+
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+
+            const modals = document.querySelectorAll(
+                ".property-photo-modal"
+            );
+
+            modals.forEach(function (modal) {
+
+                const carouselElement = modal.querySelector(
+                    ".carousel"
+                );
+
+                const counter = modal.querySelector(
+                    ".photo-counter"
+                );
+
+                if (!carouselElement || !counter) {
+                    return;
+                }
+
+                const slides = carouselElement.querySelectorAll(
+                    ".carousel-item"
+                );
+
+                function updateCounter() {
+
+                    const activeSlide =
+                        carouselElement.querySelector(
+                            ".carousel-item.active"
+                        );
+
+                    const index = Array.from(slides)
+                        .indexOf(activeSlide);
+
+                    counter.textContent =
+                        (index + 1) + " / " + slides.length;
+                }
+
+                carouselElement.addEventListener(
+                    "slid.bs.carousel",
+                    updateCounter
+                );
+
+                // Navigate using keyboard arrows.
+                modal.addEventListener("keydown", function (event) {
+
+                    if (slides.length <= 1) {
+                        return;
+                    }
+
+                    const carousel = bootstrap.Carousel
+                        .getOrCreateInstance(carouselElement, {
+                            interval: false,
+                            keyboard: false
+                        });
+
+                    if (event.key === "ArrowRight") {
+                        event.preventDefault();
+                        carousel.next();
+                    }
+
+                    if (event.key === "ArrowLeft") {
+                        event.preventDefault();
+                        carousel.prev();
+                    }
+                });
+
+                // Reset to the first photo each time the modal opens.
+                modal.addEventListener(
+                    "show.bs.modal",
+                    function () {
+
+                        const carousel = bootstrap.Carousel
+                            .getOrCreateInstance(carouselElement, {
+                                interval: false,
+                                keyboard: false
+                            });
+
+                        carousel.to(0);
+                        updateCounter();
+                    }
+                );
+
+            });
+        });
+    </script>
+}

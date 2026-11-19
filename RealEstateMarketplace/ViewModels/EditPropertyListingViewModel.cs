@@ -1,4 +1,5 @@
 ﻿
+using Microsoft.AspNetCore.Http;
 using System.ComponentModel.DataAnnotations;
 using RealEstateMarketplace.Models;
 
@@ -6,7 +7,15 @@ namespace RealEstateMarketplace.ViewModels
 {
     public class EditPropertyListingViewModel
     {
+        // ==========================================
+        // LISTING IDENTIFIER
+        // ==========================================
+
         public int Id { get; set; }
+
+        // ==========================================
+        // PROPERTY INFORMATION
+        // ==========================================
 
         [Required(ErrorMessage = "Property type is required.")]
         [EnumDataType(typeof(PropertyType))]
@@ -40,6 +49,10 @@ namespace RealEstateMarketplace.ViewModels
         [Range(0, 1000)]
         public int? Bathrooms { get; set; }
 
+        // ==========================================
+        // PROPERTY LOCATION
+        // ==========================================
+
         [Required(ErrorMessage = "Select the location on the map.")]
         [Range(typeof(decimal), "-90", "90")]
         public decimal? Latitude { get; set; }
@@ -47,6 +60,10 @@ namespace RealEstateMarketplace.ViewModels
         [Required(ErrorMessage = "Select the location on the map.")]
         [Range(typeof(decimal), "-180", "180")]
         public decimal? Longitude { get; set; }
+
+        // ==========================================
+        // LISTING INFORMATION
+        // ==========================================
 
         [Required(ErrorMessage = "Listing title is required.")]
         [StringLength(150, MinimumLength = 5)]
@@ -69,5 +86,33 @@ namespace RealEstateMarketplace.ViewModels
         [RegularExpression("^(USD|EUR|LBP)$",
             ErrorMessage = "Please select a valid currency.")]
         public string Currency { get; set; } = "USD";
+
+        // ==========================================
+        // EXISTING PROPERTY PHOTOS
+        // ==========================================
+
+        // Photos already saved in SQL Server.
+        public List<PropertyPhoto> ExistingPhotos { get; set; } = new();
+
+        // ==========================================
+        // ADD NEW PHOTOS
+        // ==========================================
+
+        [Display(Name = "Add New Photos")]
+        public List<IFormFile> NewPhotos { get; set; } = new();
+
+        // ==========================================
+        // DELETE EXISTING PHOTOS
+        // ==========================================
+
+        // IDs of photos selected for deletion.
+        public List<int> PhotoIdsToDelete { get; set; } = new();
+
+        // ==========================================
+        // CHANGE COVER PHOTO
+        // ==========================================
+
+        // ID of the selected cover photo.
+        public int? CoverPhotoId { get; set; }
     }
 }
