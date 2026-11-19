@@ -1,0 +1,534 @@
+﻿@model RealEstateMarketplace.ViewModels.EditPropertyListingViewModel
+@{
+    ViewData["Title"] = "Edit Property Listing";
+}
+
+<link rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+<div class="container mt-5 mb-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-9">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">Create Property Listing</h3>
+                </div>
+
+                <div class="card-body p-4">
+                    
+                    <form asp-controller="PropertyListings"
+                          asp-action="Edit"
+                          asp-route-id="@Model.Id"
+                          method="post">
+
+                        @Html.AntiForgeryToken()
+                        <input asp-for="Id" type="hidden" />
+
+
+                        @Html.AntiForgeryToken()
+
+                        <div asp-validation-summary="ModelOnly"
+                             class="text-danger mb-3"></div>
+
+                        <h5 class="mb-3">Property Information</h5>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="Type"
+                                       class="form-label"></label>
+                                <select asp-for="Type"
+                                        asp-items="Html.GetEnumSelectList<RealEstateMarketplace.Models.PropertyType>()"
+                                        class="form-select">
+                                    <option value="">Select property type</option>
+                                </select>
+                                <span asp-validation-for="Type"
+                                      class="text-danger"></span>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="ListingType"
+                                       class="form-label"></label>
+                                <select asp-for="ListingType"
+                                        asp-items="Html.GetEnumSelectList<RealEstateMarketplace.Models.ListingType>()"
+                                        class="form-select">
+                                    <option value="">Select sale or rent</option>
+                                </select>
+                                <span asp-validation-for="ListingType"
+                                      class="text-danger"></span>
+                            </div>
+                        </div>
+
+                        <h5 class="mt-3 mb-2">Property Address</h5>
+                        <p class="text-muted">
+                            Enter an address to find it on the map,
+                            or select a location directly on the map
+                            to fill the address automatically.
+                        </p>
+
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label asp-for="Country"
+                                       class="form-label"></label>
+                                <input asp-for="Country"
+                                       class="form-control" />
+                                <span asp-validation-for="Country"
+                                      class="text-danger"></span>
+                            </div>
+
+                            <div class="col-md-4 mb-3">
+                                <label asp-for="City"
+                                       class="form-label"></label>
+                                <input asp-for="City"
+                                       class="form-control" />
+                                <span asp-validation-for="City"
+                                      class="text-danger"></span>
+                            </div>
+
+                            <div class="col-md-4 mb-3">
+                                <label asp-for="Area"
+                                       class="form-label"></label>
+                                <input asp-for="Area"
+                                       class="form-control" />
+                                <span asp-validation-for="Area"
+                                      class="text-danger"></span>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="StreetAddress"
+                                   class="form-label"></label>
+                            <input asp-for="StreetAddress"
+                                   class="form-control" />
+                            <span asp-validation-for="StreetAddress"
+                                  class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-4">
+                            <button type="button"
+                                    id="findOnMapButton"
+                                    class="btn btn-outline-primary">
+                                Find Address on Map
+                            </button>
+
+                            <div id="mapSearchStatus"
+                                 class="small text-muted mt-2"
+                                 role="status"
+                                 aria-live="polite"></div>
+                        </div>
+
+                        <h5 class="mb-2">Select Property Location</h5>
+                        <p class="text-muted">
+                            Click the exact property location on the map.
+                            You can drag the marker to adjust it.
+                        </p>
+
+                        <div id="propertyMap"
+                             style="height:450px;
+                            width:100%;
+                            border:1px solid #dee2e6;
+                            border-radius:8px;
+                            overflow:hidden;
+                            position:relative;">
+                        </div>
+
+                        <input asp-for="Latitude" type="hidden" />
+                        <input asp-for="Longitude" type="hidden" />
+
+                        <span asp-validation-for="Latitude"
+                              class="text-danger d-block"></span>
+                        <span asp-validation-for="Longitude"
+                              class="text-danger d-block"></span>
+
+                        <div class="alert alert-secondary mt-3">
+                            <strong>Selected coordinates:</strong>
+                            <span id="selectedCoordinates">
+                                No location selected yet.
+                            </span>
+                        </div>
+
+                        <hr class="my-4" />
+
+                        <h5 class="mb-3">Property Details</h5>
+
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label asp-for="SizeSquareMeters"
+                                       class="form-label"></label>
+                                <input asp-for="SizeSquareMeters"
+                                       type="number"
+                                       step="0.01"
+                                       min="0.01"
+                                       class="form-control" />
+                                <span asp-validation-for="SizeSquareMeters"
+                                      class="text-danger"></span>
+                            </div>
+
+                            <div class="col-md-4 mb-3">
+                                <label asp-for="Bedrooms"
+                                       class="form-label"></label>
+                                <input asp-for="Bedrooms"
+                                       type="number"
+                                       min="0"
+                                       class="form-control" />
+                                <span asp-validation-for="Bedrooms"
+                                      class="text-danger"></span>
+                            </div>
+
+                            <div class="col-md-4 mb-3">
+                                <label asp-for="Bathrooms"
+                                       class="form-label"></label>
+                                <input asp-for="Bathrooms"
+                                       type="number"
+                                       min="0"
+                                       class="form-control" />
+                                <span asp-validation-for="Bathrooms"
+                                      class="text-danger"></span>
+                            </div>
+                        </div>
+
+                        <hr class="my-4" />
+
+                        <h5 class="mb-3">Advertisement Details</h5>
+
+                        <div class="mb-3">
+                            <label asp-for="Title"
+                                   class="form-label"></label>
+                            <input asp-for="Title"
+                                   class="form-control"
+                                   placeholder="Example: Modern apartment in Beirut" />
+                            <span asp-validation-for="Title"
+                                  class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Description"
+                                   class="form-label"></label>
+                            <textarea asp-for="Description"
+                                      class="form-control"
+                                      rows="5"></textarea>
+                            <span asp-validation-for="Description"
+                                  class="text-danger"></span>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="Price"
+                                       class="form-label"></label>
+                                <input asp-for="Price"
+                                       type="number"
+                                       step="0.01"
+                                       min="0.01"
+                                       class="form-control" />
+                                <span asp-validation-for="Price"
+                                      class="text-danger"></span>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="Currency"
+                                       class="form-label"></label>
+                                <select asp-for="Currency"
+                                        class="form-select">
+                                    <option value="USD">USD</option>
+                                    <option value="EUR">EUR</option>
+                                    <option value="LBP">LBP</option>
+                                </select>
+                                <span asp-validation-for="Currency"
+                                      class="text-danger"></span>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info mt-3">
+                            Your listing will be submitted for approval
+                            before it becomes public.
+                        </div>
+
+                        <div class="d-flex gap-2 mt-4">
+                            <button type="submit"
+                                    class="btn btn-success">
+                                Save Changes
+                            </button>
+
+                            <a asp-controller="PropertyListings"
+                               asp-action="MyListings"
+                               class="btn btn-secondary">
+                                Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+
+            const fields = {
+                country: document.getElementById("Country"),
+                city: document.getElementById("City"),
+                area: document.getElementById("Area"),
+                street: document.getElementById("StreetAddress"),
+                latitude: document.getElementById("Latitude"),
+                longitude: document.getElementById("Longitude")
+            };
+
+            const status = document.getElementById("mapSearchStatus");
+            const coordinates = document.getElementById("selectedCoordinates");
+            const searchButton = document.getElementById("findOnMapButton");
+
+            if (typeof L === "undefined") {
+                status.textContent = "Map library failed to load.";
+                return;
+            }
+
+            const map = L.map("propertyMap").setView(
+                [33.8547, 35.8623], 9
+            );
+
+            L.tileLayer(
+                "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                {
+                    attribution: '&copy; OpenStreetMap contributors',
+                    maxZoom: 19
+                }
+            ).addTo(map);
+
+            let marker = null;
+            let reverseRequestId = 0;
+
+            function revalidate(input) {
+                if (window.jQuery &&
+                    jQuery.validator &&
+                    jQuery.validator.unobtrusive) {
+                    jQuery(input).valid();
+                }
+            }
+
+            function setField(input, value) {
+                input.value = value || "";
+                revalidate(input);
+            }
+
+            function setCoordinates(lat, lng) {
+                if (!marker) {
+                    marker = L.marker([lat, lng], {
+                        draggable: true
+                    }).addTo(map);
+
+                    marker.on("dragend", function () {
+                        const position = marker.getLatLng();
+                        selectLocation(position.lat, position.lng);
+                    });
+                } else {
+                    marker.setLatLng([lat, lng]);
+                }
+
+                fields.latitude.value = lat.toFixed(7);
+                fields.longitude.value = lng.toFixed(7);
+
+                coordinates.textContent =
+                    lat.toFixed(7) + ", " + lng.toFixed(7);
+
+                revalidate(fields.latitude);
+                revalidate(fields.longitude);
+            }
+
+            async function selectLocation(lat, lng) {
+                setCoordinates(lat, lng);
+
+                const requestId = ++reverseRequestId;
+                status.textContent = "Detecting address...";
+
+                try {
+                    const url = new URL(
+                        "https://nominatim.openstreetmap.org/reverse"
+                    );
+
+                    url.searchParams.set("lat", lat);
+                    url.searchParams.set("lon", lng);
+                    url.searchParams.set("format", "json");
+                    url.searchParams.set("addressdetails", "1");
+
+                    const response = await fetch(url);
+
+                    if (!response.ok) {
+                        throw new Error("Address lookup failed.");
+                    }
+
+                    const data = await response.json();
+
+                    if (requestId !== reverseRequestId) return;
+
+                    const address = data.address || {};
+
+                    
+                    console.log("Full Nominatim response:", data);
+                    console.log("Address fields:", address);
+                    console.table(address);
+
+
+                    const city =
+                        address.city ||
+                        address.town ||
+                        address.village ||
+                        address.municipality ||
+                        "";
+
+                    
+                    const area =
+                        address.neighbourhood ||
+                        address.suburb ||
+                        address.quarter ||
+                        address.city_district ||
+                        address.residential ||
+                        address.hamlet ||
+                        address.locality ||
+                        address.isolated_dwelling ||
+                        "";
+
+
+                    const street =
+                        address.road ||
+                        address.pedestrian ||
+                        address.residential ||
+                        "";
+
+                    if (address.country) {
+                        setField(fields.country, address.country);
+                    }
+
+                    if (city) {
+                        setField(fields.city, city);
+                    }
+
+                    
+                    setField(fields.area, area);
+                    setField(fields.street, street);
+
+
+                    status.textContent =
+                        "Address detected. Please verify the fields.";
+                }
+                catch (error) {
+                    console.error(error);
+                    if (requestId === reverseRequestId) {
+                        status.textContent =
+                            "Location selected. Enter or verify the address manually.";
+                    }
+                }
+            }
+
+            map.on("click", function (event) {
+                selectLocation(event.latlng.lat, event.latlng.lng);
+            });
+
+            searchButton.addEventListener("click", async function () {
+                const country = fields.country.value.trim();
+                const city = fields.city.value.trim();
+                const area = fields.area.value.trim();
+                const street = fields.street.value.trim();
+
+                if (!country && !city && !area && !street) {
+                    status.textContent = "Enter an address first.";
+                    return;
+                }
+
+                const query = [street, area, city, country]
+                    .filter(Boolean)
+                    .join(", ");
+
+                searchButton.disabled = true;
+                status.textContent = "Searching for address...";
+
+                try {
+                    const url = new URL(
+                        "https://nominatim.openstreetmap.org/search"
+                    );
+
+                    url.searchParams.set("q", query);
+                    url.searchParams.set("format", "json");
+                    url.searchParams.set("limit", "1");
+
+                    const response = await fetch(url);
+
+                    if (!response.ok) {
+                        throw new Error("Search failed.");
+                    }
+
+                    const results = await response.json();
+
+                    if (results.length === 0) {
+                        status.textContent =
+                            "Address not found. Try a broader search.";
+                        return;
+                    }
+
+                    const result = results[0];
+                    const bounds = result.boundingbox.map(Number);
+
+                    
+                    const lat = parseFloat(result.lat);
+                    const lng = parseFloat(result.lon);
+
+                    let zoomLevel = 9;
+
+                    if (city) {
+                        zoomLevel = 13;
+                    }
+
+                    if (area) {
+                        zoomLevel = 15;
+                    }
+
+                    if (street) {
+                        zoomLevel = 17;
+                    }
+
+                    map.setView([lat, lng], zoomLevel, {
+                        animate: true
+                    });
+
+
+                    status.textContent =
+                        "Address found. Click the exact property location on the map.";
+
+                    // Do not replace the exact marker with
+                    // the approximate search result.
+                }
+                catch (error) {
+                    console.error(error);
+                    status.textContent =
+                        "Unable to search right now. Try again.";
+                }
+                finally {
+                    searchButton.disabled = false;
+                }
+            });
+
+            // Restore coordinates after validation errors.
+            const existingLat = parseFloat(fields.latitude.value);
+            const existingLng = parseFloat(fields.longitude.value);
+
+            if (
+                fields.latitude.value !== "" &&
+                fields.longitude.value !== "" &&
+                Number.isFinite(existingLat) &&
+                Number.isFinite(existingLng)
+            ) {
+                setCoordinates(existingLat, existingLng);
+                map.setView([existingLat, existingLng], 16);
+            }
+
+            // Correct map sizing after layout is complete.
+            setTimeout(function () {
+                map.invalidateSize();
+            }, 200);
+        });
+    </script>
+}
