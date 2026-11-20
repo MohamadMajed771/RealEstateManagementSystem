@@ -27,8 +27,8 @@ namespace RealEstateMarketplace.Data
             => Set<ConversationParticipant>();
         public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
 
-        // Transactions and reviews
-        public DbSet<Transaction> Transactions => Set<Transaction>();
+        // Transactions, inquiries and reviews
+        public DbSet<PropertyInquiry> PropertyInquiries => Set<PropertyInquiry>();
         public DbSet<PropertyReview> PropertyReviews => Set<PropertyReview>();
         public DbSet<TransferRequest> TransferRequests => Set<TransferRequest>();
 
@@ -57,6 +57,25 @@ namespace RealEstateMarketplace.Data
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
+
+            // Property inquiry relationships
+            builder.Entity<PropertyInquiry>()
+                .HasOne(i => i.PropertyListing)
+                .WithMany()
+                .HasForeignKey(i => i.PropertyListingId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            builder.Entity<PropertyInquiry>()
+                .HasOne(i => i.Requester)
+                .WithMany()
+                .HasForeignKey(i => i.RequesterId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            builder.Entity<PropertyInquiry>()
+                .HasOne(i => i.Owner)
+                .WithMany()
+                .HasForeignKey(i => i.OwnerId)
+                .OnDelete(DeleteBehavior.NoAction);
 
             // Explicit relationship:
             // One Transaction can have multiple TransferRequests.

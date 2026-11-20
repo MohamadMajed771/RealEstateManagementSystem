@@ -65,7 +65,27 @@ namespace RealEstateMarketplace.Services
 
             mailMessage.To.Add(email);
 
-            await smtpClient.SendMailAsync(mailMessage);
+            try
+            {
+                Console.WriteLine("SMTP: Attempting to send email...");
+
+                await smtpClient.SendMailAsync(mailMessage);
+
+                Console.WriteLine("SMTP: Email accepted by SMTP server.");
+            }
+            catch (SmtpException ex)
+            {
+                Console.WriteLine("SMTP ERROR: " + ex.Message);
+                Console.WriteLine("SMTP STATUS: " + ex.StatusCode);
+
+                throw;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("EMAIL ERROR: " + ex.Message);
+
+                throw;
+            }
         }
     }
 }

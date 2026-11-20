@@ -1,0 +1,25 @@
+﻿
+@model int
+
+@{
+    var pendingCount = Model;
+}
+
+<li class="nav-item">
+    <a class="nav-link text-dark d-flex align-items-center gap-2"
+       asp-controller="PropertyInquiries"
+       asp-action="Incoming">
+
+        <span>🔔</span>
+
+        <span>Incoming Requests</span>
+
+        @if (pendingCount > 0)
+        {
+            <span class="badge bg-danger rounded-pill">
+                @pendingCount
+            </span>
+        }
+
+    </a>
+</li>

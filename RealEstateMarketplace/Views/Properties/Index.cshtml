@@ -1,0 +1,112 @@
+﻿
+@model IEnumerable<RealEstateMarketplace.ViewModels.PublicPropertyCardViewModel>
+
+@{
+    ViewData["Title"] = "Browse Properties";
+}
+
+<div class="container py-5">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="fw-bold">Explore Properties</h1>
+            <p class="text-muted">
+                Find your next home, office, or investment.
+            </p>
+        </div>
+
+        <span class="badge bg-primary fs-6">
+            @Model.Count() Properties
+        </span>
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="alert alert-info text-center py-5">
+            <h4>No properties available yet</h4>
+            <p class="mb-0">
+                Approved property listings will appear here.
+            </p>
+        </div>
+    }
+    else
+    {
+        <div class="row g-4">
+            @foreach (var property in Model)
+            {
+                <div class="col-md-6 col-lg-4">
+                    <div class="card h-100 shadow-sm border-0">
+
+                        @if (!string.IsNullOrEmpty(property.CoverPhotoPath))
+                        {
+                            <img src="@Url.Content(property.CoverPhotoPath)"
+                                 class="card-img-top"
+                                 alt="@property.Title"
+                                 style="height:220px;object-fit:cover;" />
+                        }
+                        else
+                        {
+                            <div class="bg-light d-flex align-items-center justify-content-center"
+                                 style="height:220px;">
+                                <span class="text-muted">No Photo Available</span>
+                            </div>
+                        }
+
+                        <div class="card-body">
+
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="badge bg-primary">
+                                    @property.ListingType
+                                </span>
+
+                                <span class="badge bg-secondary">
+                                    @property.PropertyType
+                                </span>
+                            </div>
+
+                            <h5 class="card-title fw-bold">
+                                @property.Title
+                            </h5>
+
+                            <p class="text-muted mb-2">
+                                📍 @property.Area, @property.City
+                            </p>
+
+                            <h4 class="text-primary fw-bold">
+                                @property.Price.ToString("N0")
+                                @property.Currency
+                            </h4>
+
+                            <hr />
+
+                            <div class="d-flex flex-wrap gap-3 text-muted small">
+                                <span>📐 @property.SizeSquareMeters m²</span>
+
+                                @if (property.Bedrooms.HasValue)
+                                {
+                                    <span>🛏 @property.Bedrooms Beds</span>
+                                }
+
+                                @if (property.Bathrooms.HasValue)
+                                {
+                                    <span>🚿 @property.Bathrooms Baths</span>
+                                }
+                            </div>
+
+                        </div>
+
+                        <div class="card-footer bg-white border-0 pb-3">
+                            <a asp-controller="Properties"
+                               asp-action="Details"
+                               asp-route-id="@property.Id"
+                               class="btn btn-outline-primary w-100">
+                                View Details
+                            </a>
+                        </div>
+
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>

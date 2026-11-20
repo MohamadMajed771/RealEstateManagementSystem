@@ -844,6 +844,52 @@ namespace RealEstateMarketplace.Data.Migrations
                     b.ToTable("Properties");
                 });
 
+            modelBuilder.Entity("RealEstateMarketplace.Models.PropertyInquiry", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Message")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("OwnerId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("PropertyListingId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("RequestType")
+                        .HasColumnType("int");
+
+                    b.Property<string>("RequesterId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime?>("RespondedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerId");
+
+                    b.HasIndex("PropertyListingId");
+
+                    b.HasIndex("RequesterId");
+
+                    b.ToTable("PropertyInquiries");
+                });
+
             modelBuilder.Entity("RealEstateMarketplace.Models.PropertyListing", b =>
                 {
                     b.Property<int>("Id")
@@ -1183,7 +1229,7 @@ namespace RealEstateMarketplace.Data.Migrations
 
                     b.HasIndex("SellerId");
 
-                    b.ToTable("Transactions");
+                    b.ToTable("Transaction");
                 });
 
             modelBuilder.Entity("RealEstateMarketplace.Models.TransferRequest", b =>
@@ -1562,6 +1608,33 @@ namespace RealEstateMarketplace.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Owner");
+                });
+
+            modelBuilder.Entity("RealEstateMarketplace.Models.PropertyInquiry", b =>
+                {
+                    b.HasOne("RealEstateMarketplace.Models.ApplicationUser", "Owner")
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("RealEstateMarketplace.Models.PropertyListing", "PropertyListing")
+                        .WithMany()
+                        .HasForeignKey("PropertyListingId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("RealEstateMarketplace.Models.ApplicationUser", "Requester")
+                        .WithMany()
+                        .HasForeignKey("RequesterId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("Owner");
+
+                    b.Navigation("PropertyListing");
+
+                    b.Navigation("Requester");
                 });
 
             modelBuilder.Entity("RealEstateMarketplace.Models.PropertyListing", b =>
