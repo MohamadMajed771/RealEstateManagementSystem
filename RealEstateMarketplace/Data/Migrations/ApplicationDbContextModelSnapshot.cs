@@ -1087,6 +1087,75 @@ namespace RealEstateMarketplace.Data.Migrations
                     b.ToTable("PropertyReviews");
                 });
 
+            modelBuilder.Entity("RealEstateMarketplace.Models.RentalAgreement", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("nvarchar(3)");
+
+                    b.Property<DateTime>("EndDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FinalizedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("LandlordApproved")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LandlordApprovedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("MonthlyRent")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("RejectedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("RejectedByUserId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("RejectionReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("TenantApproved")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("TenantApprovedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("TransactionId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TransactionId")
+                        .IsUnique()
+                        .HasFilter("[Status] IN (1, 2, 3, 4)");
+
+                    b.ToTable("RentalAgreements", (string)null);
+                });
+
             modelBuilder.Entity("RealEstateMarketplace.Models.SavedSearch", b =>
                 {
                     b.Property<int>("Id")
@@ -1196,6 +1265,9 @@ namespace RealEstateMarketplace.Data.Migrations
                         .HasMaxLength(3)
                         .HasColumnType("nvarchar(3)");
 
+                    b.Property<int?>("PropertyInquiryId")
+                        .HasColumnType("int");
+
                     b.Property<int>("PropertyListingId")
                         .HasColumnType("int");
 
@@ -1212,6 +1284,9 @@ namespace RealEstateMarketplace.Data.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
+                    b.Property<int>("TransactionType")
+                        .HasColumnType("int");
+
                     b.Property<Guid?>("TransferRequestId")
                         .HasColumnType("uniqueidentifier");
 
@@ -1225,11 +1300,17 @@ namespace RealEstateMarketplace.Data.Migrations
 
                     b.HasIndex("BuyerId");
 
-                    b.HasIndex("PropertyListingId");
+                    b.HasIndex("PropertyInquiryId")
+                        .IsUnique()
+                        .HasFilter("[PropertyInquiryId] IS NOT NULL");
+
+                    b.HasIndex("PropertyListingId")
+                        .IsUnique()
+                        .HasFilter("[Status] IN (1, 2, 3, 4)");
 
                     b.HasIndex("SellerId");
 
-                    b.ToTable("Transaction");
+                    b.ToTable("Transaction", (string)null);
                 });
 
             modelBuilder.Entity("RealEstateMarketplace.Models.TransferRequest", b =>
@@ -1712,6 +1793,17 @@ namespace RealEstateMarketplace.Data.Migrations
                     b.Navigation("Transaction");
                 });
 
+            modelBuilder.Entity("RealEstateMarketplace.Models.RentalAgreement", b =>
+                {
+                    b.HasOne("RealEstateMarketplace.Models.Transaction", "Transaction")
+                        .WithMany()
+                        .HasForeignKey("TransactionId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("Transaction");
+                });
+
             modelBuilder.Entity("RealEstateMarketplace.Models.SavedSearch", b =>
                 {
                     b.HasOne("RealEstateMarketplace.Models.ApplicationUser", "User")
@@ -1731,6 +1823,11 @@ namespace RealEstateMarketplace.Data.Migrations
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
+                    b.HasOne("RealEstateMarketplace.Models.PropertyInquiry", "PropertyInquiry")
+                        .WithMany()
+                        .HasForeignKey("PropertyInquiryId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
                     b.HasOne("RealEstateMarketplace.Models.PropertyListing", "PropertyListing")
                         .WithMany()
                         .HasForeignKey("PropertyListingId")
@@ -1744,6 +1841,8 @@ namespace RealEstateMarketplace.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Buyer");
+
+                    b.Navigation("PropertyInquiry");
 
                     b.Navigation("PropertyListing");
 

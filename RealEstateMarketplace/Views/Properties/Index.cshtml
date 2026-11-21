@@ -1,8 +1,13 @@
 ﻿
+@using System.Security.Claims
+@using RealEstateMarketplace.Models
+
 @model IEnumerable<RealEstateMarketplace.ViewModels.PublicPropertyCardViewModel>
 
 @{
     ViewData["Title"] = "Browse Properties";
+
+    var isAuthenticated = User.Identity?.IsAuthenticated == true;
 }
 
 <div class="container py-5">
@@ -32,9 +37,13 @@
     else
     {
         <div class="row g-4">
+
             @foreach (var property in Model)
             {
+                var isSale = property.ListingType == ListingType.Sale;
+
                 <div class="col-md-6 col-lg-4">
+
                     <div class="card h-100 shadow-sm border-0">
 
                         @if (!string.IsNullOrEmpty(property.CoverPhotoPath))
@@ -48,13 +57,16 @@
                         {
                             <div class="bg-light d-flex align-items-center justify-content-center"
                                  style="height:220px;">
-                                <span class="text-muted">No Photo Available</span>
+                                <span class="text-muted">
+                                    No Photo Available
+                                </span>
                             </div>
                         }
 
                         <div class="card-body">
 
                             <div class="d-flex justify-content-between mb-2">
+
                                 <span class="badge bg-primary">
                                     @property.ListingType
                                 </span>
@@ -62,6 +74,7 @@
                                 <span class="badge bg-secondary">
                                     @property.PropertyType
                                 </span>
+
                             </div>
 
                             <h5 class="card-title fw-bold">
@@ -80,33 +93,90 @@
                             <hr />
 
                             <div class="d-flex flex-wrap gap-3 text-muted small">
-                                <span>📐 @property.SizeSquareMeters m²</span>
+
+                                <span>
+                                    📐 @property.SizeSquareMeters m²
+                                </span>
 
                                 @if (property.Bedrooms.HasValue)
                                 {
-                                    <span>🛏 @property.Bedrooms Beds</span>
+                                    <span>
+                                        🛏 @property.Bedrooms Beds
+                                    </span>
                                 }
 
                                 @if (property.Bathrooms.HasValue)
                                 {
-                                    <span>🚿 @property.Bathrooms Baths</span>
+                                    <span>
+                                        🚿 @property.Bathrooms Baths
+                                    </span>
                                 }
+
                             </div>
 
                         </div>
 
+                        <!-- PROPERTY ACTIONS -->
                         <div class="card-footer bg-white border-0 pb-3">
+
+                            <!-- VIEW PROPERTY -->
                             <a asp-controller="Properties"
                                asp-action="Details"
                                asp-route-id="@property.Id"
-                               class="btn btn-outline-primary w-100">
+                               class="btn btn-outline-primary w-100 mb-2">
+
                                 View Details
+
                             </a>
+
+                            <!-- CHAT BUTTON -->
+                            @if (isAuthenticated)
+                            {
+                                <form asp-controller="Chat"
+                                      asp-action="Start"
+                                      method="post">
+
+                                    @Html.AntiForgeryToken()
+
+                                    <input type="hidden"
+                                           name="propertyListingId"
+                                           value="@property.Id" />
+
+                                    <button type="submit"
+                                            class="btn btn-primary w-100">
+
+                                        <i class="bi bi-chat-dots me-1"></i>
+
+                                        @(isSale
+                                            ? "Chat with Seller"
+                                            : "Chat with Landlord")
+
+                                    </button>
+
+                                </form>
+                            }
+                            else
+                            {
+                                <a asp-area="Identity"
+                                   asp-page="/Account/Login"
+                                   asp-route-returnUrl="@Url.Action("Details", "Properties", new { id = property.Id })"
+                                   class="btn btn-outline-secondary w-100">
+
+                                    <i class="bi bi-chat-dots me-1"></i>
+
+                                    Log In to Chat
+
+                                </a>
+                            }
+
                         </div>
 
                     </div>
+
                 </div>
             }
+
         </div>
     }
+
 </div>

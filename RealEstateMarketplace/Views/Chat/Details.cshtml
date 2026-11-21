@@ -1,0 +1,281 @@
+﻿
+@model RealEstateMarketplace.Models.Conversation
+
+@{
+    ViewData["Title"] = "Property Chat";
+
+    var currentUserId = (string)ViewBag.CurrentUserId;
+    var otherParticipant = Model.Participants
+        .FirstOrDefault(p => p.UserId != currentUserId);
+}
+
+<div class="container mt-4">
+
+    <div class="card shadow">
+
+        <div class="card-header bg-primary text-white">
+            <h4 class="mb-1">Property Chat</h4>
+
+            <div>
+                <strong>Property:</strong>
+                @Model.PropertyListing.Title
+            </div>
+
+            <small>
+                Chatting with:
+                @(otherParticipant?.User?.UserName ?? "Unknown user")
+            </small>
+        </div>
+
+        <div class="card-body">
+
+            <div id="chatMessages"
+                 class="border rounded p-3 mb-3"
+                 style="height:400px; overflow-y:auto;">
+
+                @foreach (var message in Model.Messages.OrderBy(m => m.SentAt))
+                {
+                    bool isMine = message.SenderId == currentUserId;
+
+                    <div class="mb-3 @(isMine ? "text-end" : "text-start")">
+
+                        <div class="d-inline-block p-2 rounded
+                                    @(isMine ? "bg-primary text-white" : "bg-light")"
+                             style="max-width:75%; overflow-wrap:anywhere;">
+
+                            <div>@message.Content</div>
+
+                            <small class="d-block mt-1 opacity-75">
+                                @message.SentAt.ToLocalTime().ToString("g")
+                            </small>
+
+                        </div>
+                    </div>
+                }
+            </div>
+
+            @if (!Model.IsClosed)
+            {
+                <div class="input-group">
+
+                    <input type="text"
+                           id="messageInput"
+                           class="form-control"
+                           maxlength="2000"
+                           placeholder="Type your message..." />
+
+                    <button id="sendButton"
+                            type="button"
+                            class="btn btn-primary"
+                            disabled>
+                        Send
+                    </button>
+
+                </div>
+
+                <div id="chatError"
+                     class="text-danger mt-2"
+                     role="alert"></div>
+            }
+            else
+            {
+                <div class="alert alert-warning">
+                    This conversation is closed.
+                </div>
+            }
+
+        </div>
+
+    </div>
+
+    <a asp-controller="Chat"
+       asp-action="Index"
+       class="btn btn-secondary mt-3">
+        Back to My Conversations
+    </a>
+
+</div>
+
+@section Scripts {
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
+
+    <script>
+        const conversationId = @Model.Id;
+        const currentUserId = @Html.Raw(
+            System.Text.Json.JsonSerializer.Serialize(currentUserId)
+        );
+        const isClosed = @Model.IsClosed.ToString().ToLowerInvariant();
+
+        const messagesContainer =
+            document.getElementById("chatMessages");
+
+        const messageInput =
+            document.getElementById("messageInput");
+
+        const sendButton =
+            document.getElementById("sendButton");
+
+        const errorElement =
+            document.getElementById("chatError");
+
+        function scrollToBottom() {
+            messagesContainer.scrollTop =
+                messagesContainer.scrollHeight;
+        }
+
+        scrollToBottom();
+
+        if (!isClosed) {
+
+            const connection = new signalR.HubConnectionBuilder()
+                .withUrl("/chatHub")
+                .withAutomaticReconnect()
+                .build();
+
+            function setChatError(message) {
+                errorElement.textContent = message;
+            }
+
+            function addMessage(message) {
+
+                if (message.conversationId !== conversationId)
+                    return;
+
+                const isMine =
+                    message.senderId === currentUserId;
+
+                const wrapper = document.createElement("div");
+
+                wrapper.className =
+                    "mb-3 " + (isMine ? "text-end" : "text-start");
+
+                const bubble = document.createElement("div");
+
+                bubble.className =
+                    "d-inline-block p-2 rounded " +
+                    (isMine
+                        ? "bg-primary text-white"
+                        : "bg-light");
+
+                bubble.style.maxWidth = "75%";
+                bubble.style.overflowWrap = "anywhere";
+
+                const content = document.createElement("div");
+
+                // textContent prevents HTML injection.
+                content.textContent = message.content;
+
+                const timestamp = document.createElement("small");
+
+                timestamp.className =
+                    "d-block mt-1 opacity-75";
+
+                timestamp.textContent =
+                    new Date(message.sentAt).toLocaleString();
+
+                bubble.appendChild(content);
+                bubble.appendChild(timestamp);
+                wrapper.appendChild(bubble);
+
+                messagesContainer.appendChild(wrapper);
+
+                scrollToBottom();
+            }
+
+            connection.on("ReceiveMessage", addMessage);
+
+            connection.onreconnecting(() => {
+                sendButton.disabled = true;
+                setChatError("Reconnecting to chat...");
+            });
+
+            connection.onreconnected(async () => {
+                try {
+                    await connection.invoke(
+                        "JoinConversation",
+                        conversationId
+                    );
+
+                    sendButton.disabled = false;
+                    setChatError("");
+                }
+                catch (error) {
+                    sendButton.disabled = true;
+                    setChatError(error.message);
+                }
+            });
+
+            connection.onclose(() => {
+                sendButton.disabled = true;
+                setChatError("Chat connection closed.");
+            });
+
+            async function startChat() {
+                try {
+                    await connection.start();
+
+                    await connection.invoke(
+                        "JoinConversation",
+                        conversationId
+                    );
+
+                    sendButton.disabled = false;
+                    setChatError("");
+                }
+                catch (error) {
+                    sendButton.disabled = true;
+                    setChatError(error.message);
+                }
+            }
+
+            async function sendMessage() {
+
+                const content = messageInput.value.trim();
+
+                if (!content ||
+                    connection.state !==
+                    signalR.HubConnectionState.Connected)
+                    return;
+
+                sendButton.disabled = true;
+
+                try {
+                    await connection.invoke(
+                        "SendMessage",
+                        conversationId,
+                        content
+                    );
+
+                    messageInput.value = "";
+                    setChatError("");
+                }
+                catch (error) {
+                    setChatError(error.message);
+                }
+                finally {
+                    sendButton.disabled = false;
+                    messageInput.focus();
+                }
+            }
+
+            sendButton.addEventListener(
+                "click",
+                sendMessage
+            );
+
+            messageInput.addEventListener(
+                "keydown",
+                function (event) {
+
+                    if (event.key === "Enter") {
+                        event.preventDefault();
+                        sendMessage();
+                    }
+                }
+            );
+
+            startChat();
+        }
+    </script>
+}

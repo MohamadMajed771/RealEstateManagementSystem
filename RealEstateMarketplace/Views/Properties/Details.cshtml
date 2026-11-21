@@ -31,23 +31,32 @@
 
 <div class="container py-4">
 
-    <!-- Back Button -->
-    @if (Context.Request.Query["from"] == "incoming" && isOwner)
-    {
-        <a asp-controller="PropertyInquiries"
-           asp-action="Incoming"
-           class="btn btn-outline-secondary mb-4">
-            ← Back to Incoming Requests
-        </a>
+    <!-- Smart Back Button -->
+    @{
+        var from = Context.Request.Query["from"].ToString();
+
+        var returnUrl = Context.Request.Query["returnUrl"].ToString();
+
+        var validReturnUrl =
+            !string.IsNullOrWhiteSpace(returnUrl) &&
+            Url.IsLocalUrl(returnUrl);
+
+        var backUrl = validReturnUrl
+            ? returnUrl
+            : from == "incoming" && isOwner
+                ? Url.Action("Incoming", "PropertyInquiries")
+                : Url.Action("Index", "Properties");
+
+        var backText = validReturnUrl
+            ? "Back to My Transactions"
+            : from == "incoming" && isOwner
+                ? "Back to Incoming Requests"
+                : "Back to Properties";
     }
-    else
-    {
-        <a asp-controller="Properties"
-           asp-action="Index"
-           class="btn btn-outline-secondary mb-4">
-            ← Back to Properties
-        </a>
-    }
+
+    <a href="@backUrl" class="btn btn-outline-secondary mb-4">
+        &larr; @backText
+    </a>
 
     <!-- Success Message -->
     @if (TempData["Success"] != null)
@@ -308,11 +317,19 @@
                         <p class="small text-muted mt-2 mb-0">
                             You are the owner of this property.
                         </p>
+
+                        <!-- Owner can access received chats -->
+                        <a asp-controller="Chat"
+                           asp-action="Index"
+                           class="btn btn-outline-primary w-100 mt-3">
+                            My Messages
+                        </a>
                     }
                     else if (isAuthenticated)
                     {
                         @* AUTHENTICATED NON-OWNER *@
 
+                        <!-- Request to Buy or Rent -->
                         <form asp-controller="PropertyInquiries"
                               asp-action="Create"
                               method="post"
@@ -337,6 +354,33 @@
                                 ? "Submit a purchase request to the property owner."
                                 : "Submit a rental request to the property owner.")
                         </p>
+
+                        <!-- NEW: CHAT WITH LANDLORD -->
+                        <form asp-controller="Chat"
+                              asp-action="Start"
+                              method="post"
+                              class="mt-3">
+
+                            @Html.AntiForgeryToken()
+
+                            <input type="hidden"
+                                   name="propertyListingId"
+                                   value="@Model.Id" />
+
+                            <button type="submit"
+                                    class="btn btn-outline-primary w-100">
+                                <i class="bi bi-chat-dots me-1"></i>
+                                @(isSale
+                                    ? "Chat with Seller"
+                                    : "Chat with Landlord")
+                            </button>
+
+                        </form>
+
+                        <p class="small text-muted mt-2 mb-0">
+                            Contact the property owner directly to ask
+                            questions or negotiate the price.
+                        </p>
                     }
                     else
                     {
@@ -358,6 +402,14 @@
                            asp-route-returnUrl="@Url.Action("Details", "Properties", new { id = Model.Id })"
                            class="btn btn-outline-primary w-100 mt-2">
                             Create an Account
+                        </a>
+
+                        <!-- Guest chat login -->
+                        <a asp-area="Identity"
+                           asp-page="/Account/Login"
+                           asp-route-returnUrl="@Url.Action("Details", "Properties", new { id = Model.Id })"
+                           class="btn btn-outline-secondary w-100 mt-3">
+                            Log In to Chat with Owner
                         </a>
                     }
 

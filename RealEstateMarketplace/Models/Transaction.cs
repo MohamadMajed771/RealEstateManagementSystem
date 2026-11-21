@@ -8,6 +8,15 @@ namespace RealEstateMarketplace.Models
         [Key]
         public int Id { get; set; }
 
+        // Accepted inquiry that initiated this transaction
+        public int? PropertyInquiryId { get; set; }
+
+        public PropertyInquiry? PropertyInquiry { get; set; }
+
+        // Sale or Rent
+        [Required]
+        public ListingType TransactionType { get; set; }
+
         // Property listing involved in the transaction
         [Required]
         public int PropertyListingId { get; set; }

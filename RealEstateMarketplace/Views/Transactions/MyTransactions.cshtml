@@ -1,0 +1,650 @@
+﻿
+@using System
+@using System.Collections.Generic
+@using System.Linq
+@using System.Security.Claims
+@using System.Globalization
+@using RealEstateMarketplace.Models
+
+@model IEnumerable<Transaction>
+
+@{
+    ViewData["Title"] = "My Transactions";
+
+    var currentUserId =
+        User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+    var agreements =
+        ViewBag.RentalAgreements as Dictionary<int, RentalAgreement>
+        ?? new Dictionary<int, RentalAgreement>();
+
+    var today = DateTime.UtcNow.Date;
+}
+
+<div class="container mt-4 mb-5">
+
+    <h2 class="mb-4">My Transactions</h2>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show"
+             role="alert">
+            @TempData["Success"]
+
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert"
+                    aria-label="Close">
+            </button>
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show"
+             role="alert">
+            @TempData["Error"]
+
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert"
+                    aria-label="Close">
+            </button>
+        </div>
+    }
+
+    @if (!Model.Any())
+    {
+        <div class="alert alert-info">
+            You don't have any transactions yet.
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+
+            <table class="table table-bordered table-hover align-middle">
+
+                <thead class="table-dark">
+                    <tr>
+                        <th>Property</th>
+                        <th>Type</th>
+                        <th>My Role</th>
+                        <th>Agreed Price</th>
+                        <th>Transaction Status</th>
+                        <th>Tenant / Buyer</th>
+                        <th>Owner</th>
+                        <th>Confirmations</th>
+                        <th>Transaction Action</th>
+                        <th>Rental Agreement</th>
+                        <th>Chat</th>
+                        <th>Created</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @foreach (var transaction in Model)
+                    {
+                        bool isBuyer =
+                            transaction.BuyerId == currentUserId;
+
+                        bool isSeller =
+                            transaction.SellerId == currentUserId;
+
+                        bool myConfirmed = isBuyer
+                            ? transaction.BuyerConfirmed
+                            : transaction.SellerConfirmed;
+
+                        bool canConfirm =
+                            (isBuyer || isSeller) &&
+                            !myConfirmed &&
+                            transaction.Status ==
+                                TransactionStatus.PendingConfirmation;
+
+                        bool isRent =
+                            transaction.TransactionType == ListingType.Rent;
+
+                        bool isConfirmed =
+                            transaction.Status == TransactionStatus.Confirmed &&
+                            transaction.BuyerConfirmed &&
+                            transaction.SellerConfirmed;
+
+                        agreements.TryGetValue(
+                            transaction.Id,
+                            out var rentalAgreement);
+
+                        bool isRejected =
+                            rentalAgreement?.Status ==
+                                RentalAgreementStatus.Rejected;
+
+                        bool hasFinalizedAgreement =
+                            rentalAgreement?.FinalizedAt != null;
+
+                        bool canPropose =
+                            isRent &&
+                            isSeller &&
+                            isConfirmed &&
+                            (rentalAgreement == null || isRejected) &&
+                            !hasFinalizedAgreement &&
+                            transaction.PropertyListing.Status ==
+                                ListingStatus.Approved &&
+                            !transaction.PropertyListing.IsDeleted;
+
+                        string agreementStatusClass =
+                            rentalAgreement?.Status switch
+                            {
+                                RentalAgreementStatus.Active =>
+                                    "bg-success",
+
+                                RentalAgreementStatus.Scheduled =>
+                                    "bg-info text-dark",
+
+                                RentalAgreementStatus.PendingApproval =>
+                                    "bg-warning text-dark",
+
+                                RentalAgreementStatus.Rejected =>
+                                    "bg-danger",
+
+                                RentalAgreementStatus.Cancelled =>
+                                    "bg-danger",
+
+                                _ => "bg-secondary"
+                            };
+
+                        <tr>
+                            <td>
+                                <a asp-controller="Properties"
+                                   asp-action="Details"
+                                   asp-route-id="@transaction.PropertyListingId"
+                                   asp-route-returnUrl="@Url.Action("MyTransactions", "Transactions")">
+                                    @transaction.PropertyListing.Title
+                                </a>
+                            </td>
+
+                            <td>
+                                @transaction.TransactionType
+                            </td>
+
+                            <td>
+                                @if (isBuyer)
+                                {
+                                    <span class="badge bg-primary">
+                                        @(isRent ? "Tenant" : "Buyer")
+                                    </span>
+                                }
+                                else if (isSeller)
+                                {
+                                    <span class="badge bg-secondary">
+                                        @(isRent ? "Landlord" : "Seller")
+                                    </span>
+                                }
+                            </td>
+
+                            <td>
+                                @transaction.AgreedPrice.ToString("N2")
+                                @transaction.Currency
+                            </td>
+
+                            <td>
+                                @if (transaction.Status ==
+                                     TransactionStatus.Confirmed)
+                                {
+                                    <span class="badge bg-success">
+                                        Confirmed
+                                    </span>
+                                }
+                                else if (transaction.Status ==
+                                         TransactionStatus.PendingConfirmation)
+                                {
+                                    <span class="badge bg-warning text-dark">
+                                        Pending Confirmation
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">
+                                        @transaction.Status
+                                    </span>
+                                }
+                            </td>
+
+                            <td>
+                                @(transaction.Buyer?.UserName ?? "Unknown")
+                            </td>
+
+                            <td>
+                                @(transaction.Seller?.UserName ?? "Unknown")
+                            </td>
+
+                            <td>
+                                <div class="mb-1">
+                                    <strong>
+                                        @(isRent ? "Tenant" : "Buyer"):
+                                    </strong>
+
+                                    @if (transaction.BuyerConfirmed)
+                                    {
+                                        <span class="badge bg-success">
+                                            Confirmed
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-warning text-dark">
+                                            Waiting
+                                        </span>
+                                    }
+                                </div>
+
+                                <div>
+                                    <strong>
+                                        @(isRent ? "Landlord" : "Seller"):
+                                    </strong>
+
+                                    @if (transaction.SellerConfirmed)
+                                    {
+                                        <span class="badge bg-success">
+                                            Confirmed
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-warning text-dark">
+                                            Waiting
+                                        </span>
+                                    }
+                                </div>
+                            </td>
+
+                            <!-- TRANSACTION ACTION -->
+                            <td>
+                                @if (canConfirm)
+                                {
+                                    <form asp-controller="Transactions"
+                                          asp-action="Confirm"
+                                          method="post">
+
+                                        @Html.AntiForgeryToken()
+
+                                        <input type="hidden"
+                                               name="id"
+                                               value="@transaction.Id" />
+
+                                        <button type="submit"
+                                                class="btn btn-success btn-sm"
+                                                onclick="return confirm('Do you confirm this transaction?');">
+                                            Confirm
+                                        </button>
+                                    </form>
+                                }
+                                else if (myConfirmed)
+                                {
+                                    <span class="text-success fw-bold">
+                                        Confirmed
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">
+                                        Not available
+                                    </span>
+                                }
+                            </td>
+
+                            <!-- RENTAL AGREEMENT -->
+                            <td style="min-width:250px;">
+
+                                @if (!isRent)
+                                {
+                                    <span class="text-muted">
+                                        Not applicable
+                                    </span>
+                                }
+                                else
+                                {
+                                    @if (rentalAgreement != null)
+                                    {
+                                        <div class="mb-2">
+                                            <span class="badge @agreementStatusClass">
+                                                @rentalAgreement.Status
+                                            </span>
+                                        </div>
+
+                                        <div class="small mb-2">
+                                            <strong>Monthly Rent:</strong>
+                                            @rentalAgreement.MonthlyRent.ToString("N2")
+                                            @rentalAgreement.Currency
+                                        </div>
+
+                                        <a asp-controller="RentalAgreements"
+                                           asp-action="Details"
+                                           asp-route-id="@rentalAgreement.Id"
+                                           class="btn btn-outline-primary btn-sm mb-2">
+                                            View Rental Agreement
+                                        </a>
+
+                                        @if (rentalAgreement.Status ==
+                                             RentalAgreementStatus.PendingApproval)
+                                        {
+                                            <div class="small text-muted mt-2">
+                                                @if (isBuyer &&
+                                                     !rentalAgreement.TenantApproved)
+                                                {
+                                                    <span>
+                                                        Your approval is required.
+                                                        You can accept or reject
+                                                        this proposal.
+                                                    </span>
+                                                }
+                                                else if (isSeller &&
+                                                         !rentalAgreement.LandlordApproved)
+                                                {
+                                                    <span>
+                                                        Your approval is required.
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span>
+                                                        Waiting for the other party.
+                                                    </span>
+                                                }
+                                            </div>
+                                        }
+
+                                        @if (isRejected)
+                                        {
+                                            <div class="alert alert-danger p-2 mt-2 mb-2">
+                                                <strong>Proposal Rejected</strong>
+
+                                                @if (!string.IsNullOrWhiteSpace(
+                                                     rentalAgreement.RejectionReason))
+                                                {
+                                                    <p class="small mb-1 mt-1">
+                                                        <strong>Reason:</strong>
+                                                        @rentalAgreement.RejectionReason
+                                                    </p>
+                                                }
+
+                                                @if (rentalAgreement.RejectedAt.HasValue)
+                                                {
+                                                    <div class="small">
+                                                        @rentalAgreement.RejectedAt.Value.ToString(
+                                                            "dd MMM yyyy HH:mm")
+                                                        UTC
+                                                    </div>
+                                                }
+                                            </div>
+
+                                            @if (isBuyer)
+                                            {
+                                                <div class="small text-muted">
+                                                    Waiting for the landlord
+                                                    to submit revised rental terms.
+                                                </div>
+                                            }
+                                        }
+
+                                        @if (rentalAgreement.Status ==
+                                             RentalAgreementStatus.Scheduled)
+                                        {
+                                            <div class="small text-info mt-2">
+                                                Both parties approved.
+                                                The property is reserved.
+                                            </div>
+                                        }
+
+                                        @if (rentalAgreement.Status ==
+                                             RentalAgreementStatus.Active)
+                                        {
+                                            <div class="small text-success mt-2">
+                                                The rental is active.
+                                            </div>
+                                        }
+                                    }
+
+                                    @if (canPropose)
+                                    {
+                                        <div class="mt-2">
+
+                                            @if (rentalAgreement == null)
+                                            {
+                                                <span class="badge bg-warning text-dark mb-2">
+                                                    Agreement Not Created
+                                                </span>
+                                            }
+
+                                            <button type="button"
+                                                    class="btn btn-primary btn-sm d-block"
+                                                    data-bs-toggle="collapse"
+                                                    data-bs-target="#rentalForm-@transaction.Id"
+                                                    aria-expanded="false"
+                                                    aria-controls="rentalForm-@transaction.Id">
+                                                @(isRejected
+                                                    ? "Propose Revised Agreement"
+                                                    : "Propose Rental Agreement")
+                                            </button>
+
+                                        </div>
+                                    }
+                                    else if (rentalAgreement == null)
+                                    {
+                                        @if (!isConfirmed)
+                                        {
+                                            <span class="text-muted small">
+                                                Waiting for both parties
+                                                to confirm interest.
+                                            </span>
+                                        }
+                                        else if (isBuyer)
+                                        {
+                                            <span class="text-muted small">
+                                                Waiting for the landlord
+                                                to propose an agreement.
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted small">
+                                                Agreement proposal unavailable.
+                                            </span>
+                                        }
+                                    }
+                                }
+                            </td>
+
+                            <!-- NEW: PRIVATE CHAT -->
+                            <td style="min-width:170px;">
+
+                                @if (isBuyer)
+                                {
+                                    <form asp-controller="Chat"
+                                          asp-action="Start"
+                                          method="post">
+
+                                        @Html.AntiForgeryToken()
+
+                                        <input type="hidden"
+                                               name="propertyListingId"
+                                               value="@transaction.PropertyListingId" />
+
+                                        <button type="submit"
+                                                class="btn btn-outline-primary btn-sm w-100">
+
+                                            <i class="bi bi-chat-dots me-1"></i>
+
+                                            @(isRent
+                                                ? "Chat with Landlord"
+                                                : "Chat with Seller")
+
+                                        </button>
+
+                                    </form>
+                                }
+                                else if (isSeller)
+                                {
+                                    <a asp-controller="Chat"
+                                       asp-action="Index"
+                                       class="btn btn-outline-primary btn-sm w-100">
+
+                                        <i class="bi bi-chat-dots me-1"></i>
+
+                                        @(isRent
+                                            ? "Messages from Tenants"
+                                            : "Messages from Buyers")
+
+                                    </a>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">
+                                        Not available
+                                    </span>
+                                }
+
+                            </td>
+
+                            <td>
+                                @transaction.CreatedAt.ToString("yyyy-MM-dd")
+                            </td>
+                        </tr>
+
+                        <!-- RENTAL PROPOSAL FORM -->
+                        @if (canPropose)
+                        {
+                            <tr>
+                                <td colspan="12" class="p-0">
+
+                                    <div class="collapse"
+                                         id="rentalForm-@transaction.Id">
+
+                                        <div class="card border-0 rounded-0">
+                                            <div class="card-body bg-light">
+
+                                                <h5 class="mb-3">
+                                                    @(isRejected
+                                                        ? "Propose Revised Rental Agreement"
+                                                        : "Propose Rental Agreement")
+                                                </h5>
+
+                                                <p class="text-muted">
+                                                    Property:
+                                                    <strong>
+                                                        @transaction.PropertyListing.Title
+                                                    </strong>
+                                                </p>
+
+                                                @if (isRejected &&
+                                                     rentalAgreement != null)
+                                                {
+                                                    <div class="alert alert-warning">
+                                                        <strong>
+                                                            Previous proposal was rejected.
+                                                        </strong>
+
+                                                        <p class="mb-1 mt-2">
+                                                            Previous rent:
+                                                            <strong>
+                                                                @rentalAgreement.MonthlyRent.ToString("N2")
+                                                                @rentalAgreement.Currency
+                                                            </strong>
+                                                        </p>
+
+                                                        <p class="mb-0">
+                                                            Tenant's reason:
+                                                            @rentalAgreement.RejectionReason
+                                                        </p>
+                                                    </div>
+                                                }
+
+                                                <form asp-controller="RentalAgreements"
+                                                      asp-action="Propose"
+                                                      method="post">
+
+                                                    @Html.AntiForgeryToken()
+
+                                                    <input type="hidden"
+                                                           name="transactionId"
+                                                           value="@transaction.Id" />
+
+                                                    <div class="row g-3">
+
+                                                        <div class="col-md-4">
+                                                            <label class="form-label">
+                                                                Monthly Rent
+                                                                (@transaction.Currency)
+                                                            </label>
+
+                                                            <input type="number"
+                                                                   name="monthlyRent"
+                                                                   class="form-control"
+                                                                   min="0.01"
+                                                                   max="999999999999.99"
+                                                                   step="0.01"
+                                                                   value="@((rentalAgreement?.MonthlyRent ?? transaction.AgreedPrice).ToString("0.00", CultureInfo.InvariantCulture))"
+                                                                   required />
+                                                        </div>
+
+                                                        <div class="col-md-4">
+                                                            <label class="form-label">
+                                                                Rental Start Date
+                                                            </label>
+
+                                                            <input type="date"
+                                                                   name="startDate"
+                                                                   class="form-control"
+                                                                   min="@today.ToString("yyyy-MM-dd")"
+                                                                   value="@(rentalAgreement != null && rentalAgreement.StartDate.Date >= today ? rentalAgreement.StartDate.ToString("yyyy-MM-dd") : "")"
+                                                                   required />
+                                                        </div>
+
+                                                        <div class="col-md-4">
+                                                            <label class="form-label">
+                                                                Rental End Date
+                                                            </label>
+
+                                                            <input type="date"
+                                                                   name="endDate"
+                                                                   class="form-control"
+                                                                   min="@today.AddDays(1).ToString("yyyy-MM-dd")"
+                                                                   value="@(rentalAgreement != null && rentalAgreement.EndDate.Date > today ? rentalAgreement.EndDate.ToString("yyyy-MM-dd") : "")"
+                                                                   required />
+                                                        </div>
+
+                                                    </div>
+
+                                                    <div class="mt-3">
+                                                        <p class="small text-muted">
+                                                            By submitting this proposal,
+                                                            you approve these rental terms
+                                                            as the landlord.
+
+                                                            The tenant must approve them
+                                                            separately before the rental
+                                                            becomes final.
+                                                        </p>
+
+                                                        <button type="submit"
+                                                                class="btn btn-success"
+                                                                onclick="return confirm('Send these rental terms to the tenant?');">
+                                                            @(isRejected
+                                                                ? "Submit Revised Proposal"
+                                                                : "Submit Rental Proposal")
+                                                        </button>
+                                                    </div>
+
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+
+            </table>
+        </div>
+    }
+</div>

@@ -1,8 +1,10 @@
 ﻿
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="utf-8" />
+
     <meta name="viewport"
           content="width=device-width, initial-scale=1.0" />
 
@@ -10,9 +12,11 @@
 
     <script type="importmap"></script>
 
+    <!-- Bootstrap -->
     <link rel="stylesheet"
           href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
 
+    <!-- Site CSS -->
     <link rel="stylesheet"
           href="~/css/site.css"
           asp-append-version="true" />
@@ -20,24 +24,32 @@
     <link rel="stylesheet"
           href="~/RealEstateMarketplace.styles.css"
           asp-append-version="true" />
+
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+
 </head>
 
 <body>
 
     <header>
+
         <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
 
             <div class="container-fluid">
 
-                <!-- Website Brand -->
+                <!-- WEBSITE BRAND -->
                 <a class="navbar-brand"
                    asp-area=""
                    asp-controller="Properties"
                    asp-action="Index">
+
                     RealEstateMarketplace
+
                 </a>
 
-                <!-- Mobile Menu Button -->
+                <!-- MOBILE MENU BUTTON -->
                 <button class="navbar-toggler"
                         type="button"
                         data-bs-toggle="collapse"
@@ -47,49 +59,95 @@
                         aria-label="Toggle navigation">
 
                     <span class="navbar-toggler-icon"></span>
+
                 </button>
 
                 <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
 
-                    <!-- Left Navigation -->
+                    <!-- LEFT NAVIGATION -->
                     <ul class="navbar-nav flex-grow-1">
 
-                        <!-- Home -->
+                        <!-- HOME -->
                         <li class="nav-item">
+
                             <a class="nav-link text-dark"
                                asp-area=""
                                asp-controller="Properties"
                                asp-action="Index">
+
                                 Home
+
                             </a>
+
                         </li>
 
-                        <!-- Properties -->
+                        <!-- PROPERTIES -->
                         <li class="nav-item">
+
                             <a class="nav-link text-dark"
                                asp-area=""
                                asp-controller="Properties"
                                asp-action="Index">
+
                                 Properties
+
                             </a>
+
                         </li>
 
-                        <!-- Incoming Requests Notification -->
-                        @await Component.InvokeAsync("PendingRequests")
+                        @if (User.Identity?.IsAuthenticated == true)
+                        {
+                            <!-- INCOMING REQUESTS -->
+                            @await Component.InvokeAsync("PendingRequests")
 
-                        <!-- Privacy -->
+                            <!-- MY TRANSACTIONS -->
+                            <li class="nav-item">
+
+                                <a class="nav-link text-dark"
+                                   asp-area=""
+                                   asp-controller="Transactions"
+                                   asp-action="MyTransactions">
+
+                                    My Transactions
+
+                                </a>
+
+                            </li>
+
+                            <!-- NEW: MY MESSAGES -->
+                            <li class="nav-item">
+
+                                <a class="nav-link text-dark"
+                                   asp-area=""
+                                   asp-controller="Chat"
+                                   asp-action="Index">
+
+                                    <i class="bi bi-chat-dots me-1"></i>
+
+                                    My Messages
+
+                                </a>
+
+                            </li>
+                        }
+
+                        <!-- PRIVACY -->
                         <li class="nav-item">
+
                             <a class="nav-link text-dark"
                                asp-area=""
                                asp-controller="Home"
                                asp-action="Privacy">
+
                                 Privacy
+
                             </a>
+
                         </li>
 
                     </ul>
 
-                    <!-- Login / Register / Logout -->
+                    <!-- LOGIN / REGISTER / LOGOUT -->
                     <partial name="_LoginPartial" />
 
                 </div>
@@ -97,28 +155,40 @@
             </div>
 
         </nav>
+
     </header>
 
-    <!-- Main Content -->
+    <!-- MAIN CONTENT -->
     <div class="container">
+
         <main role="main" class="pb-3">
+
             @RenderBody()
+
         </main>
+
     </div>
 
-    <!-- Footer -->
+    <!-- FOOTER -->
     <footer class="border-top footer text-muted">
+
         <div class="container">
+
             &copy; 2026 - RealEstateMarketplace -
+
             <a asp-area=""
                asp-controller="Home"
                asp-action="Privacy">
+
                 Privacy
+
             </a>
+
         </div>
+
     </footer>
 
-    <!-- Scripts -->
+    <!-- JAVASCRIPT -->
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
 
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
@@ -129,4 +199,5 @@
     @await RenderSectionAsync("Scripts", required: false)
 
 </body>
+
 </html>

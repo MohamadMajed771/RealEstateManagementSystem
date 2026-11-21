@@ -1,12 +1,18 @@
-using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
-using RealEstateMarketplace.Data;
-using RealEstateMarketplace.Models;
 
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
+using Microsoft.EntityFrameworkCore;
+
+using RealEstateMarketplace.Data;
+using RealEstateMarketplace.Hubs;
+using RealEstateMarketplace.Models;
 using RealEstateMarketplace.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// ==========================================
+// DATABASE CONNECTION
+// ==========================================
 
 var connectionString = builder.Configuration
     .GetConnectionString("DefaultConnection")
@@ -18,6 +24,10 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
+// ==========================================
+// ASP.NET CORE IDENTITY
+// ==========================================
+
 builder.Services.AddDefaultIdentity<ApplicationUser>(options =>
 {
     options.SignIn.RequireConfirmedAccount = true;
@@ -25,12 +35,35 @@ builder.Services.AddDefaultIdentity<ApplicationUser>(options =>
 .AddRoles<IdentityRole>()
 .AddEntityFrameworkStores<ApplicationDbContext>();
 
+// ==========================================
+// MVC
+// ==========================================
+
 builder.Services.AddControllersWithViews();
 
+// ==========================================
+// SIGNALR - REAL-TIME CHAT
+// ==========================================
+
+builder.Services.AddSignalR();
+
+// ==========================================
+// APPLICATION SERVICES
+// ==========================================
+
 builder.Services.AddTransient<IEmailSender, SmtpEmailSender>();
+
 builder.Services.AddScoped<PropertyPhotoService>();
 
+// ==========================================
+// BUILD APPLICATION
+// ==========================================
+
 var app = builder.Build();
+
+// ==========================================
+// ERROR HANDLING
+// ==========================================
 
 if (app.Environment.IsDevelopment())
 {
@@ -42,24 +75,50 @@ else
     app.UseHsts();
 }
 
+// ==========================================
+// HTTP MIDDLEWARE
+// ==========================================
+
 app.UseHttpsRedirection();
 
 app.UseStaticFiles();
 
 app.UseRouting();
 
+// Authentication must come before authorization.
 app.UseAuthentication();
 app.UseAuthorization();
 
+// ==========================================
+// STATIC ASSETS
+// ==========================================
+
 app.MapStaticAssets();
+
+// ==========================================
+// SIGNALR ENDPOINT
+// ==========================================
+
+app.MapHub<ChatHub>("/chatHub");
+
+// ==========================================
+// MVC ROUTING
+// ==========================================
 
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Properties}/{action=Index}/{id?}")
     .WithStaticAssets();
 
-// Identity login/register Razor Pages
+// ==========================================
+// IDENTITY RAZOR PAGES
+// ==========================================
+
 app.MapRazorPages()
    .WithStaticAssets();
+
+// ==========================================
+// START APPLICATION
+// ==========================================
 
 app.Run();
