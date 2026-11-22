@@ -432,3 +432,8 @@ FodyWeavers.xsd
 **/*.publishsettings
 .env
 .env.*
+
+
+
+# User-uploaded property images
+RealEstateMarketplace/wwwroot/uploads/properties/

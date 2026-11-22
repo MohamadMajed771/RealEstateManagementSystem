@@ -27,6 +27,8 @@
     var isOwner =
         isAuthenticated &&
         currentUserId == Model.SellerId;
+
+    var isFavorite = ViewBag.IsFavorite == true;
 }
 
 <div class="container py-4">
@@ -54,17 +56,33 @@
                 : "Back to Properties";
     }
 
-    <a href="@backUrl" class="btn btn-outline-secondary mb-4">
+    <a href="@backUrl"
+       class="btn btn-outline-secondary mb-4">
         &larr; @backText
     </a>
 
-    <!-- Success Message -->
+    <!-- Success Messages -->
     @if (TempData["Success"] != null)
     {
         <div class="alert alert-success alert-dismissible fade show"
              role="alert">
 
             @TempData["Success"]
+
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert"
+                    aria-label="Close">
+            </button>
+        </div>
+    }
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show"
+             role="alert">
+
+            @TempData["SuccessMessage"]
 
             <button type="button"
                     class="btn-close"
@@ -304,7 +322,48 @@
                         @Model.Price.ToString("N0") @Model.Currency
                     </h5>
 
-                    @* OWNER *@
+                    <!-- FAVORITES -->
+                    @if (isAuthenticated)
+                    {
+                        <form asp-controller="Favorites"
+                              asp-action="@(isFavorite ? "Remove" : "Add")"
+                              method="post"
+                              class="mt-3">
+
+                            @Html.AntiForgeryToken()
+
+                            <input type="hidden"
+                                   name="propertyListingId"
+                                   value="@Model.Id" />
+
+                            <input type="hidden"
+                                   name="returnUrl"
+                                   value="@(Context.Request.Path + Context.Request.QueryString)" />
+
+                            <button type="submit"
+                                    class="btn @(isFavorite ? "btn-danger" : "btn-outline-danger") w-100">
+
+                                <i class="bi @(isFavorite ? "bi-heart-fill" : "bi-heart") me-1"></i>
+
+                                @(isFavorite
+                                    ? "Remove from Favorites"
+                                    : "Add to Favorites")
+                            </button>
+                        </form>
+                    }
+                    else
+                    {
+                        <a asp-area="Identity"
+                           asp-page="/Account/Login"
+                           asp-route-returnUrl="@Url.Action("Details", "Properties", new { id = Model.Id })"
+                           class="btn btn-outline-danger w-100 mt-3">
+
+                            <i class="bi bi-heart me-1"></i>
+                            Log In to Save Property
+                        </a>
+                    }
+
+                    <!-- OWNER ACTIONS -->
                     @if (isOwner)
                     {
                         <a asp-controller="PropertyListings"
@@ -318,7 +377,6 @@
                             You are the owner of this property.
                         </p>
 
-                        <!-- Owner can access received chats -->
                         <a asp-controller="Chat"
                            asp-action="Index"
                            class="btn btn-outline-primary w-100 mt-3">
@@ -327,8 +385,6 @@
                     }
                     else if (isAuthenticated)
                     {
-                        @* AUTHENTICATED NON-OWNER *@
-
                         <!-- Request to Buy or Rent -->
                         <form asp-controller="PropertyInquiries"
                               asp-action="Create"
@@ -346,7 +402,6 @@
                                     onclick="return confirm('Are you sure you want to submit this request?');">
                                 @requestText
                             </button>
-
                         </form>
 
                         <p class="small text-muted mt-2 mb-0">
@@ -355,7 +410,7 @@
                                 : "Submit a rental request to the property owner.")
                         </p>
 
-                        <!-- NEW: CHAT WITH LANDLORD -->
+                        <!-- CHAT WITH SELLER / LANDLORD -->
                         <form asp-controller="Chat"
                               asp-action="Start"
                               method="post"
@@ -369,12 +424,13 @@
 
                             <button type="submit"
                                     class="btn btn-outline-primary w-100">
+
                                 <i class="bi bi-chat-dots me-1"></i>
+
                                 @(isSale
                                     ? "Chat with Seller"
                                     : "Chat with Landlord")
                             </button>
-
                         </form>
 
                         <p class="small text-muted mt-2 mb-0">
@@ -384,8 +440,7 @@
                     }
                     else
                     {
-                        @* GUEST *@
-
+                        <!-- GUEST ACTIONS -->
                         <a asp-area="Identity"
                            asp-page="/Account/Login"
                            asp-route-returnUrl="@Url.Action("Details", "Properties", new { id = Model.Id })"
@@ -404,7 +459,6 @@
                             Create an Account
                         </a>
 
-                        <!-- Guest chat login -->
                         <a asp-area="Identity"
                            asp-page="/Account/Login"
                            asp-route-returnUrl="@Url.Action("Details", "Properties", new { id = Model.Id })"

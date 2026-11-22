@@ -8,11 +8,24 @@
     ViewData["Title"] = "Browse Properties";
 
     var isAuthenticated = User.Identity?.IsAuthenticated == true;
+
+    var selectedListingType = ViewBag.ListingType?.ToString();
+    var selectedPropertyType = ViewBag.PropertyType?.ToString();
+    var selectedCity = ViewBag.City?.ToString();
+
+    var selectedMinPrice = ViewBag.MinPrice?.ToString();
+    var selectedMaxPrice = ViewBag.MaxPrice?.ToString();
+    var selectedMinBedrooms = ViewBag.MinBedrooms?.ToString();
+    var selectedMinBathrooms = ViewBag.MinBathrooms?.ToString();
+    var selectedMinSize = ViewBag.MinSize?.ToString();
+
+    var currentUrl = Context.Request.Path + Context.Request.QueryString;
 }
 
 <div class="container py-5">
 
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <!-- PAGE HEADER -->
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
         <div>
             <h1 class="fw-bold">Explore Properties</h1>
             <p class="text-muted">
@@ -25,13 +38,281 @@
         </span>
     </div>
 
+    <!-- SUCCESS MESSAGE -->
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show"
+             role="alert">
+            @TempData["SuccessMessage"]
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert"
+                    aria-label="Close">
+            </button>
+        </div>
+    }
+
+    <!-- ERROR MESSAGE -->
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show"
+             role="alert">
+            @TempData["ErrorMessage"]
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert"
+                    aria-label="Close">
+            </button>
+        </div>
+    }
+
+    <!-- ADVANCED FILTERS -->
+    <div class="card shadow-sm border-0 mb-5">
+
+        <div class="card-header bg-white py-3">
+            <h5 class="fw-bold mb-0">
+                <i class="bi bi-funnel me-2"></i>
+                Advanced Property Search
+            </h5>
+        </div>
+
+        <div class="card-body p-4">
+
+            <!-- SEARCH FORM -->
+            <form id="propertySearchForm"
+                  asp-controller="Properties"
+                  asp-action="Index"
+                  method="get">
+
+                <div class="row g-3">
+
+                    <!-- LISTING TYPE -->
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">
+                            Listing Type
+                        </label>
+
+                        <select name="listingType"
+                                class="form-select">
+
+                            <option value="">All Listings</option>
+
+                            @foreach (var type in Enum.GetValues<ListingType>())
+                            {
+                                if (selectedListingType == type.ToString())
+                                {
+                                    <option value="@type" selected>
+                                        @type
+                                    </option>
+                                }
+                                else
+                                {
+                                    <option value="@type">
+                                        @type
+                                    </option>
+                                }
+                            }
+                        </select>
+                    </div>
+
+                    <!-- PROPERTY TYPE -->
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">
+                            Property Type
+                        </label>
+
+                        <select name="propertyType"
+                                class="form-select">
+
+                            <option value="">All Property Types</option>
+
+                            @foreach (var type in Enum.GetValues<PropertyType>())
+                            {
+                                if (selectedPropertyType == type.ToString())
+                                {
+                                    <option value="@type" selected>
+                                        @type
+                                    </option>
+                                }
+                                else
+                                {
+                                    <option value="@type">
+                                        @type
+                                    </option>
+                                }
+                            }
+                        </select>
+                    </div>
+
+                    <!-- CITY -->
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">
+                            City
+                        </label>
+
+                        <input type="text"
+                               name="city"
+                               value="@selectedCity"
+                               class="form-control"
+                               placeholder="e.g. Beirut, Jounieh, Baabda" />
+                    </div>
+
+                    <!-- MINIMUM PRICE -->
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">
+                            Minimum Price (USD)
+                        </label>
+
+                        <input type="number"
+                               name="minPrice"
+                               value="@selectedMinPrice"
+                               class="form-control"
+                               min="0"
+                               step="0.01"
+                               placeholder="Minimum price" />
+                    </div>
+
+                    <!-- MAXIMUM PRICE -->
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">
+                            Maximum Price (USD)
+                        </label>
+
+                        <input type="number"
+                               name="maxPrice"
+                               value="@selectedMaxPrice"
+                               class="form-control"
+                               min="0"
+                               step="0.01"
+                               placeholder="Maximum price" />
+                    </div>
+
+                    <!-- MINIMUM BEDROOMS -->
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">
+                            Minimum Bedrooms
+                        </label>
+
+                        <input type="number"
+                               name="minBedrooms"
+                               value="@selectedMinBedrooms"
+                               class="form-control"
+                               min="0"
+                               placeholder="e.g. 2" />
+                    </div>
+
+                    <!-- MINIMUM BATHROOMS -->
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">
+                            Minimum Bathrooms
+                        </label>
+
+                        <input type="number"
+                               name="minBathrooms"
+                               value="@selectedMinBathrooms"
+                               class="form-control"
+                               min="0"
+                               placeholder="e.g. 1" />
+                    </div>
+
+                    <!-- MINIMUM SIZE -->
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">
+                            Minimum Surface Area (m²)
+                        </label>
+
+                        <input type="number"
+                               name="minSize"
+                               value="@selectedMinSize"
+                               class="form-control"
+                               min="0"
+                               step="0.01"
+                               placeholder="e.g. 100" />
+                    </div>
+
+                </div>
+
+                <!-- FILTER ACTIONS -->
+                <div class="d-flex flex-wrap gap-2 mt-4">
+
+                    <!-- SEARCH -->
+                    <button type="submit"
+                            class="btn btn-primary px-4">
+                        <i class="bi bi-search me-1"></i>
+                        Search Properties
+                    </button>
+
+                    <!-- CLEAR -->
+                    <a asp-controller="Properties"
+                       asp-action="Index"
+                       class="btn btn-outline-secondary px-4">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i>
+                        Clear Filters
+                    </a>
+
+                    <!-- SAVE SEARCH -->
+                    @if (isAuthenticated)
+                    {
+                        <button type="button"
+                                class="btn btn-outline-success px-4"
+                                data-bs-toggle="modal"
+                                data-bs-target="#saveSearchModal">
+                            <i class="bi bi-bookmark-plus me-1"></i>
+                            Save This Search
+                        </button>
+                    }
+                    else
+                    {
+                        <a asp-area="Identity"
+                           asp-page="/Account/Login"
+                           asp-route-returnUrl="@currentUrl"
+                           class="btn btn-outline-success px-4">
+                            <i class="bi bi-bookmark-plus me-1"></i>
+                            Log In to Save Search
+                        </a>
+                    }
+
+                    <!-- MY SAVED SEARCHES -->
+                    @if (isAuthenticated)
+                    {
+                        <a asp-controller="SavedSearches"
+                           asp-action="Index"
+                           class="btn btn-outline-primary px-4">
+                            <i class="bi bi-bookmarks me-1"></i>
+                            My Saved Searches
+                        </a>
+                    }
+
+                </div>
+
+            </form>
+        </div>
+    </div>
+
+    <!-- PROPERTY RESULTS -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+
+        <h4 class="fw-bold mb-0">
+            Available Properties
+        </h4>
+
+        <span class="text-muted">
+            @Model.Count() results found
+        </span>
+
+    </div>
+
     @if (!Model.Any())
     {
         <div class="alert alert-info text-center py-5">
-            <h4>No properties available yet</h4>
+
+            <h4>No matching properties found</h4>
+
             <p class="mb-0">
-                Approved property listings will appear here.
+                Try changing your filters or clearing them
+                to see more properties.
             </p>
+
         </div>
     }
     else
@@ -46,6 +327,7 @@
 
                     <div class="card h-100 shadow-sm border-0">
 
+                        <!-- PROPERTY PHOTO -->
                         @if (!string.IsNullOrEmpty(property.CoverPhotoPath))
                         {
                             <img src="@Url.Content(property.CoverPhotoPath)"
@@ -63,6 +345,7 @@
                             </div>
                         }
 
+                        <!-- PROPERTY INFORMATION -->
                         <div class="card-body">
 
                             <div class="d-flex justify-content-between mb-2">
@@ -124,9 +407,7 @@
                                asp-action="Details"
                                asp-route-id="@property.Id"
                                class="btn btn-outline-primary w-100 mb-2">
-
                                 View Details
-
                             </a>
 
                             <!-- CHAT BUTTON -->
@@ -150,7 +431,6 @@
                                         @(isSale
                                             ? "Chat with Seller"
                                             : "Chat with Landlord")
-
                                     </button>
 
                                 </form>
@@ -163,16 +443,13 @@
                                    class="btn btn-outline-secondary w-100">
 
                                     <i class="bi bi-chat-dots me-1"></i>
-
                                     Log In to Chat
 
                                 </a>
                             }
 
                         </div>
-
                     </div>
-
                 </div>
             }
 
@@ -180,3 +457,135 @@
     }
 
 </div>
+
+<!-- SAVE SEARCH MODAL -->
+@if (isAuthenticated)
+{
+    <div class="modal fade"
+         id="saveSearchModal"
+         tabindex="-1"
+         aria-labelledby="saveSearchModalLabel"
+         aria-hidden="true">
+
+        <div class="modal-dialog modal-dialog-centered">
+
+            <div class="modal-content">
+
+                <div class="modal-header">
+                    <h5 class="modal-title"
+                        id="saveSearchModalLabel">
+                        <i class="bi bi-bookmark-plus me-2"></i>
+                        Save This Search
+                    </h5>
+
+                    <button type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal"
+                            aria-label="Close">
+                    </button>
+                </div>
+
+                <form id="saveSearchForm"
+                      asp-controller="SavedSearches"
+                      asp-action="Create"
+                      method="post">
+
+                    @Html.AntiForgeryToken()
+
+                    <div class="modal-body">
+
+                        <label for="savedSearchName"
+                               class="form-label fw-semibold">
+                            Search Name
+                        </label>
+
+                        <input type="text"
+                               id="savedSearchName"
+                               name="name"
+                               class="form-control"
+                               minlength="3"
+                               maxlength="100"
+                               required
+                               placeholder="e.g. Apartments in Beirut" />
+
+                        <p class="text-muted small mt-2 mb-0">
+                            Your current search filters will be saved
+                            so you can use them again later.
+                        </p>
+
+                        <!-- FILTER VALUES -->
+                        <input type="hidden" name="listingType" />
+                        <input type="hidden" name="propertyType" />
+                        <input type="hidden" name="city" />
+                        <input type="hidden" name="minPrice" />
+                        <input type="hidden" name="maxPrice" />
+                        <input type="hidden" name="minBedrooms" />
+                        <input type="hidden" name="minBathrooms" />
+                        <input type="hidden" name="minSize" />
+
+                    </div>
+
+                    <div class="modal-footer">
+
+                        <button type="button"
+                                class="btn btn-outline-secondary"
+                                data-bs-dismiss="modal">
+                            Cancel
+                        </button>
+
+                        <button type="submit"
+                                class="btn btn-success">
+                            <i class="bi bi-bookmark-check me-1"></i>
+                            Save Search
+                        </button>
+
+                    </div>
+
+                </form>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const searchForm =
+                document.getElementById("propertySearchForm");
+
+            const saveForm =
+                document.getElementById("saveSearchForm");
+
+            const modal =
+                document.getElementById("saveSearchModal");
+
+            if (!searchForm || !saveForm || !modal) {
+                return;
+            }
+
+            modal.addEventListener("show.bs.modal", function () {
+                const filterNames = [
+                    "listingType",
+                    "propertyType",
+                    "city",
+                    "minPrice",
+                    "maxPrice",
+                    "minBedrooms",
+                    "minBathrooms",
+                    "minSize"
+                ];
+
+                filterNames.forEach(function (name) {
+                    const source =
+                        searchForm.elements.namedItem(name);
+
+                    const target =
+                        saveForm.elements.namedItem(name);
+
+                    if (source && target) {
+                        target.value = source.value;
+                    }
+                });
+            });
+        });
+    </script>
+}

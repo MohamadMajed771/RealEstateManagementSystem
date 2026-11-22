@@ -1,0 +1,172 @@
+﻿
+@using RealEstateMarketplace.Models
+@model IEnumerable<RealEstateMarketplace.ViewModels.PublicPropertyCardViewModel>
+
+@{
+    ViewData["Title"] = "My Favorites";
+}
+
+<div class="container py-5">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="fw-bold">
+                <i class="bi bi-heart-fill text-danger me-2"></i>
+                My Favorites
+            </h1>
+            <p class="text-muted">
+                Properties you have saved for later.
+            </p>
+        </div>
+
+        <a asp-controller="Properties"
+           asp-action="Index"
+           class="btn btn-outline-primary">
+            <i class="bi bi-search me-1"></i>
+            Browse Properties
+        </a>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success">
+            @TempData["SuccessMessage"]
+        </div>
+    }
+
+    @if (!Model.Any())
+    {
+        <div class="text-center py-5">
+            <i class="bi bi-heart display-1 text-muted"></i>
+
+            <h3 class="mt-3">No favorite properties yet</h3>
+
+            <p class="text-muted">
+                Browse properties and save the ones you like.
+            </p>
+
+            <a asp-controller="Properties"
+               asp-action="Index"
+               class="btn btn-primary mt-2">
+                Explore Properties
+            </a>
+        </div>
+    }
+    else
+    {
+        <p class="text-muted mb-4">
+            You have @Model.Count() saved properties.
+        </p>
+
+        <div class="row g-4">
+            @foreach (var property in Model)
+            {
+                <div class="col-md-6 col-lg-4">
+                    <div class="card h-100 shadow-sm border-0">
+
+                        @if (!string.IsNullOrEmpty(property.CoverPhotoPath))
+                        {
+                            <img src="@Url.Content(property.CoverPhotoPath)"
+                                 class="card-img-top"
+                                 alt="@property.Title"
+                                 style="height:220px;object-fit:cover;" />
+                        }
+                        else
+                        {
+                            <div class="bg-light d-flex align-items-center justify-content-center"
+                                 style="height:220px;">
+                                <span class="text-muted">
+                                    No Photo Available
+                                </span>
+                            </div>
+                        }
+
+                        <div class="card-body">
+
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="badge bg-primary">
+                                    @property.ListingType
+                                </span>
+
+                                <span class="badge bg-secondary">
+                                    @property.PropertyType
+                                </span>
+                            </div>
+
+                            <h5 class="card-title fw-bold">
+                                @property.Title
+                            </h5>
+
+                            <p class="text-muted">
+                                <i class="bi bi-geo-alt"></i>
+                                @property.Area, @property.City
+                            </p>
+
+                            <h4 class="text-primary fw-bold">
+                                @property.Price.ToString("N0")
+                                @property.Currency
+                            </h4>
+
+                            <div class="d-flex flex-wrap gap-3 text-muted small">
+                                <span>
+                                    <i class="bi bi-arrows-fullscreen"></i>
+                                    @property.SizeSquareMeters m²
+                                </span>
+
+                                @if (property.Bedrooms.HasValue)
+                                {
+                                    <span>
+                                        <i class="bi bi-door-open"></i>
+                                        @property.Bedrooms Beds
+                                    </span>
+                                }
+
+                                @if (property.Bathrooms.HasValue)
+                                {
+                                    <span>
+                                        <i class="bi bi-droplet"></i>
+                                        @property.Bathrooms Baths
+                                    </span>
+                                }
+                            </div>
+
+                        </div>
+
+                        <div class="card-footer bg-white border-0 pb-3">
+
+                            <a asp-controller="Properties"
+                               asp-action="Details"
+                               asp-route-id="@property.Id"
+                               class="btn btn-outline-primary w-100 mb-2">
+                                View Details
+                            </a>
+
+                            <form asp-controller="Favorites"
+                                  asp-action="Remove"
+                                  method="post">
+
+                                @Html.AntiForgeryToken()
+
+                                <input type="hidden"
+                                       name="propertyListingId"
+                                       value="@property.Id" />
+
+                                <input type="hidden"
+                                       name="returnUrl"
+                                       value="@Url.Action("Index", "Favorites")" />
+
+                                <button type="submit"
+                                        class="btn btn-outline-danger w-100">
+                                    <i class="bi bi-heartbreak me-1"></i>
+                                    Remove from Favorites
+                                </button>
+
+                            </form>
+
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>

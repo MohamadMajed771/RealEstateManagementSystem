@@ -10,6 +10,12 @@ using RealEstateMarketplace.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddScoped<
+    RealEstateMarketplace.Services.SavedSearchNotificationService>();
+
+builder.Services.AddSingleton<
+    RealEstateMarketplace.Services.RabbitMqConnectionService>();
+
 // ==========================================
 // DATABASE CONNECTION
 // ==========================================
