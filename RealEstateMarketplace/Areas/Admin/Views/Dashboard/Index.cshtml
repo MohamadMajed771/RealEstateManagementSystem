@@ -1,0 +1,171 @@
+﻿@{
+    ViewData["Title"] = "Admin Dashboard";
+}
+
+<style>
+    .admin-dashboard {
+        max-width: 1250px;
+        margin: 30px auto;
+        padding: 0 20px;
+        font-family: 'Segoe UI', Arial, sans-serif;
+        color: #142b49;
+    }
+
+    .admin-header {
+        background: #142b49;
+        color: white;
+        padding: 30px;
+        border-radius: 14px;
+        margin-bottom: 25px;
+    }
+
+    .admin-header h1 {
+        font-size: 28px;
+        margin: 0 0 8px;
+    }
+
+    .admin-header p {
+        color: #cbd5e1;
+        margin: 0;
+    }
+
+    .admin-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 20px;
+    }
+
+    .admin-card {
+        background: white;
+        padding: 24px;
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+        border-left: 5px solid var(--accent);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    }
+
+    .admin-card h3 {
+        font-size: 15px;
+        color: #64748b;
+        margin: 0 0 15px;
+    }
+
+    .admin-card .number {
+        font-size: 36px;
+        font-weight: 700;
+        color: #142b49;
+    }
+
+    .admin-actions {
+        margin-top: 30px;
+        padding: 24px;
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+    }
+
+    .admin-actions h2 {
+        font-size: 20px;
+        margin: 0 0 18px;
+    }
+
+    .admin-action-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+
+    .admin-action {
+        display: inline-block;
+        padding: 12px 20px;
+        border-radius: 8px;
+        background: #eaf1ff;
+        color: #1d4ed8;
+        font-weight: 600;
+        text-decoration: none;
+    }
+
+    .admin-action.disabled {
+        background: #f1f5f9;
+        color: #64748b;
+        cursor: default;
+    }
+
+    @@media (max-width: 850px) {
+        .admin-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @@media (max-width: 550px) {
+        .admin-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<div class="admin-dashboard">
+
+    <div class="admin-header">
+        <h1>Real Estate Admin Dashboard</h1>
+        <p>Manage properties, users, reports and marketplace activity.</p>
+    </div>
+
+    <div class="admin-grid">
+
+        <div class="admin-card" style="--accent:#2563eb">
+            <h3>Total Users</h3>
+            <div class="number">@ViewBag.TotalUsers</div>
+        </div>
+
+        <div class="admin-card" style="--accent:#64748b">
+            <h3>Total Listings</h3>
+            <div class="number">@ViewBag.TotalListings</div>
+        </div>
+
+        <div class="admin-card" style="--accent:#f59e0b">
+            <h3>Pending Approval</h3>
+            <div class="number">@ViewBag.PendingListings</div>
+        </div>
+
+        <div class="admin-card" style="--accent:#16a34a">
+            <h3>Approved Listings</h3>
+            <div class="number">@ViewBag.ApprovedListings</div>
+        </div>
+
+        <div class="admin-card" style="--accent:#dc2626">
+            <h3>Rejected Listings</h3>
+            <div class="number">@ViewBag.RejectedListings</div>
+        </div>
+
+        <div class="admin-card" style="--accent:#7c3aed">
+            <h3>Property Reports</h3>
+            <div class="number">@ViewBag.TotalReports</div>
+        </div>
+
+    </div>
+
+    <div class="admin-actions">
+        <h2>Quick Actions</h2>
+
+        <div class="admin-action-grid">
+
+            <a class="admin-action"
+               asp-area="Admin"
+               asp-controller="Listings"
+               asp-action="Index">
+                Review Property Listings
+            </a>
+
+
+            <span class="admin-action disabled">
+                Manage Users — Coming Soon
+            </span>
+
+            <span class="admin-action disabled">
+                Property Reports — Coming Soon
+            </span>
+        </div>
+    </div>
+
+</div>

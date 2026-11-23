@@ -10,11 +10,13 @@ using RealEstateMarketplace.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddScoped<
-    RealEstateMarketplace.Services.SavedSearchNotificationService>();
+// ==========================================
+// APPLICATION SERVICES
+// ==========================================
 
-builder.Services.AddSingleton<
-    RealEstateMarketplace.Services.RabbitMqConnectionService>();
+builder.Services.AddScoped<SavedSearchNotificationService>();
+
+builder.Services.AddSingleton<RabbitMqConnectionService>();
 
 // ==========================================
 // DATABASE CONNECTION
@@ -33,6 +35,9 @@ builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 // ==========================================
 // ASP.NET CORE IDENTITY
 // ==========================================
+
+// ApplicationUser is defined in Models.
+// GlobalUsings.cs provides the ApplicationUser alias.
 
 builder.Services.AddDefaultIdentity<ApplicationUser>(options =>
 {
@@ -54,7 +59,7 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddSignalR();
 
 // ==========================================
-// APPLICATION SERVICES
+// EMAIL AND PHOTO SERVICES
 // ==========================================
 
 builder.Services.AddTransient<IEmailSender, SmtpEmailSender>();
@@ -91,7 +96,7 @@ app.UseStaticFiles();
 
 app.UseRouting();
 
-// Authentication must come before authorization.
+// Authentication before authorization
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -111,9 +116,18 @@ app.MapHub<ChatHub>("/chatHub");
 // MVC ROUTING
 // ==========================================
 
+// Admin Area and other MVC Areas
+app.MapControllerRoute(
+    name: "areas",
+    pattern: "{area:exists}/{controller=Dashboard}/{action=Index}/{id?}")
+    .WithStaticAssets();
+
+// Public marketplace controllers
+// Explicitly use the empty Area for public routes.
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Properties}/{action=Index}/{id?}")
+    pattern: "{controller=Properties}/{action=Index}/{id?}",
+    defaults: new { area = "" })
     .WithStaticAssets();
 
 // ==========================================

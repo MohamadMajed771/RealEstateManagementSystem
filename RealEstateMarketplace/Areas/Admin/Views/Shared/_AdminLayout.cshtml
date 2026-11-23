@@ -1,0 +1,177 @@
+﻿@{
+    var currentController =
+        ViewContext.RouteData.Values["controller"]?.ToString();
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0" />
+
+    <title>@ViewData["Title"] - Real Estate Admin</title>
+
+    <style>
+            * {
+                box-sizing: border-box;
+            }
+
+            body {
+                margin: 0;
+                background: #f5f7fb;
+                color: #142b49;
+                font-family: 'Segoe UI', Arial, sans-serif;
+            }
+
+            .admin-navbar {
+                background: #142b49;
+                color: white;
+                padding: 15px 30px;
+            }
+
+            .admin-navbar-inner {
+                max-width: 1250px;
+                margin: auto;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                flex-wrap: wrap;
+                gap: 20px;
+            }
+
+            .admin-brand {
+                font-size: 20px;
+                font-weight: 700;
+                color: white;
+                text-decoration: none;
+            }
+
+            .admin-nav-links {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                flex-wrap: wrap;
+            }
+
+                .admin-nav-links a {
+                    display: inline-block;
+                    padding: 10px 14px;
+                    color: #cbd5e1;
+                    text-decoration: none;
+                    border-radius: 7px;
+                    font-size: 14px;
+                }
+
+                    .admin-nav-links a:hover,
+                    .admin-nav-links a.active {
+                        background: #25476f;
+                        color: white;
+                    }
+
+                .admin-nav-links .disabled-link {
+                    color: #94a3b8;
+                    padding: 10px 14px;
+                    font-size: 14px;
+                }
+
+            .admin-logout {
+                border: 1px solid #64748b;
+                border-radius: 7px;
+                padding: 10px 14px;
+                background: transparent;
+                color: white;
+                cursor: pointer;
+                font-size: 14px;
+            }
+
+                .admin-logout:hover {
+                    background: #dc2626;
+                    border-color: #dc2626;
+                }
+
+            .admin-main {
+                min-height: calc(100vh - 150px);
+            }
+
+            .admin-footer {
+                text-align: center;
+                padding: 22px;
+                color: #64748b;
+                font-size: 13px;
+            }
+
+            @@media (max-width: 650px) {
+                .admin-navbar {
+                    padding: 15px;
+                }
+
+                .admin-navbar-inner {
+                    flex-direction: column;
+                    align-items: flex-start;
+                }
+            }
+    </style>
+
+    @await RenderSectionAsync("Styles", required: false)
+</head>
+
+<body>
+
+    <header class="admin-navbar">
+        <div class="admin-navbar-inner">
+
+            <a class="admin-brand"
+               href="@Url.Content("~/Admin/Dashboard")">
+                Real Estate Admin
+            </a>
+
+            <nav class="admin-nav-links">
+
+                <a href="@Url.Content("~/Admin/Dashboard")"
+                   class="@(currentController == "Dashboard" ? "active" : "")">
+                    Dashboard
+                </a>
+
+                <a href="@Url.Content("~/Admin/Listings")"
+                   class="@(currentController == "Listings" ? "active" : "")">
+                    Pending Listings
+                </a>
+
+                <span class="disabled-link">
+                    Manage Users (Soon)
+                </span>
+
+                <span class="disabled-link">
+                    Reports (Soon)
+                </span>
+
+                <form method="post"
+                      action="@Url.Content("~/Identity/Account/Logout")"
+                      style="margin:0;">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden"
+                           name="returnUrl"
+                           value="@Url.Content("~/")" />
+
+                    <button type="submit" class="admin-logout">
+                        Logout
+                    </button>
+                </form>
+
+            </nav>
+        </div>
+    </header>
+
+    <main class="admin-main">
+        @RenderBody()
+    </main>
+
+    <footer class="admin-footer">
+        Real Estate Marketplace — Admin Panel
+    </footer>
+
+    @await RenderSectionAsync("Scripts", required: false)
+
+</body>
+</html>

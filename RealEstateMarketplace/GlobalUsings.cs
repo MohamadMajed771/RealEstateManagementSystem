@@ -1,0 +1,1 @@
+﻿global using ApplicationUser = RealEstateMarketplace.Models.ApplicationUser;

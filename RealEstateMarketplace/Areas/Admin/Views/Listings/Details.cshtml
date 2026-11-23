@@ -1,0 +1,453 @@
+﻿
+@model RealEstateMarketplace.Models.PropertyListing
+@using RealEstateMarketplace.Models
+
+@{
+    ViewData["Title"] = "Review Property";
+
+    var photos = ViewBag.Photos as List<PropertyPhoto>
+        ?? new List<PropertyPhoto>();
+}
+
+<style>
+    .review-page {
+        max-width: 1100px;
+        margin: 30px auto;
+        padding: 0 20px;
+        font-family: 'Segoe UI', Arial, sans-serif;
+        color: #142b49;
+    }
+
+    .review-header {
+        background: #142b49;
+        color: white;
+        padding: 25px;
+        border-radius: 12px;
+        margin-bottom: 24px;
+    }
+
+    .review-header h1 {
+        margin: 0 0 8px;
+        font-size: 26px;
+    }
+
+    .review-panel {
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 25px;
+        margin-bottom: 20px;
+    }
+
+    .review-panel h2 {
+        font-size: 20px;
+        margin-top: 0;
+    }
+
+    .review-details {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+    }
+
+    .review-field label {
+        display: block;
+        color: #64748b;
+        font-size: 13px;
+        margin-bottom: 5px;
+    }
+
+    .review-field strong {
+        font-size: 15px;
+        overflow-wrap: anywhere;
+    }
+
+    .review-description {
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        line-height: 1.6;
+    }
+
+    .review-photos {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 15px;
+    }
+
+    .review-photos img {
+        width: 100%;
+        height: 200px;
+        object-fit: cover;
+        border-radius: 9px;
+        border: 1px solid #e2e8f0;
+    }
+
+    .review-back {
+        display: inline-block;
+        background: #eaf1ff;
+        color: #1d4ed8;
+        padding: 12px 18px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 600;
+    }
+
+    .review-actions {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        flex-wrap: wrap;
+        margin-top: 20px;
+    }
+
+    .review-approve,
+    .review-reject {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        color: white;
+        border: none;
+        padding: 12px 22px;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    .review-approve {
+        background: #16a34a;
+    }
+
+    .review-approve:hover {
+        background: #15803d;
+    }
+
+    .review-reject {
+        background: #dc2626;
+    }
+
+    .review-reject:hover {
+        background: #b91c1c;
+    }
+
+    .review-notice {
+        color: #64748b;
+        font-size: 14px;
+        margin-top: 12px;
+    }
+
+    .rejection-section {
+        margin-top: 25px;
+        padding: 20px;
+        border: 1px solid #fecaca;
+        background: #fff7f7;
+        border-radius: 10px;
+    }
+
+    .rejection-section h3 {
+        font-size: 18px;
+        color: #991b1b;
+        margin-bottom: 12px;
+    }
+
+    .rejection-section label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 8px;
+    }
+
+    .rejection-section textarea {
+        display: block;
+        width: 100%;
+        min-height: 120px;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        padding: 12px;
+        resize: vertical;
+        font: inherit;
+    }
+
+    .rejection-section textarea:focus {
+        outline: 2px solid #dc2626;
+        outline-offset: 1px;
+    }
+
+    @@media (max-width: 650px) {
+        .review-details,
+        .review-photos {
+            grid-template-columns: 1fr;
+        }
+
+        .review-actions {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .review-actions form,
+        .review-approve,
+        .review-reject,
+        .review-back {
+            width: 100%;
+            text-align: center;
+            justify-content: center;
+        }
+    }
+</style>
+
+<div class="review-page">
+
+    <div class="review-header">
+        <h1>Review Property #@Model.Id</h1>
+        <div>@Model.Title</div>
+    </div>
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger">
+            @TempData["Error"]
+        </div>
+    }
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success">
+            @TempData["Success"]
+        </div>
+    }
+
+    <div class="review-panel">
+        <h2>Property Information</h2>
+
+        <div class="review-details">
+
+            <div class="review-field">
+                <label>Owner</label>
+                <strong>
+                    @Model.Property.Owner.FirstName
+                    @Model.Property.Owner.LastName
+                </strong>
+            </div>
+
+            <div class="review-field">
+                <label>Property Type</label>
+                <strong>@Model.Property.Type</strong>
+            </div>
+
+            <div class="review-field">
+                <label>Listing Type</label>
+                <strong>@Model.ListingType</strong>
+            </div>
+
+            <div class="review-field">
+                <label>Price</label>
+                <strong>
+                    @Model.Price.ToString("N2") @Model.Currency
+                </strong>
+            </div>
+
+            <div class="review-field">
+                <label>Location</label>
+                <strong>
+                    @Model.Property.City,
+                    @Model.Property.Area,
+                    @Model.Property.Country
+                </strong>
+            </div>
+
+            <div class="review-field">
+                <label>Size</label>
+                <strong>
+                    @Model.Property.SizeSquareMeters m²
+                </strong>
+            </div>
+
+            <div class="review-field">
+                <label>Bedrooms</label>
+                <strong>
+                    @(Model.Property.Bedrooms?.ToString() ?? "N/A")
+                </strong>
+            </div>
+
+            <div class="review-field">
+                <label>Bathrooms</label>
+                <strong>
+                    @(Model.Property.Bathrooms?.ToString() ?? "N/A")
+                </strong>
+            </div>
+
+            <div class="review-field">
+                <label>Submitted</label>
+                <strong>
+                    @Model.CreatedAt.ToString("yyyy-MM-dd HH:mm")
+                </strong>
+            </div>
+
+            <div class="review-field">
+                <label>Status</label>
+
+                @if (Model.Status == ListingStatus.PendingApproval)
+                {
+                    <span class="badge bg-warning text-dark">
+                        Pending Approval
+                    </span>
+                }
+                else if (Model.Status == ListingStatus.Approved)
+                {
+                    <span class="badge bg-success">
+                        Approved
+                    </span>
+                }
+                else if (Model.Status == ListingStatus.Rejected)
+                {
+                    <span class="badge bg-danger">
+                        Rejected
+                    </span>
+                }
+                else
+                {
+                    <strong>@Model.Status</strong>
+                }
+            </div>
+
+        </div>
+    </div>
+
+    <div class="review-panel">
+        <h2>Description</h2>
+
+        <div class="review-description">
+            @Model.Description
+        </div>
+    </div>
+
+    <div class="review-panel">
+        <h2>Property Photos (@photos.Count)</h2>
+
+        @if (photos.Any())
+        {
+            <div class="review-photos">
+                @foreach (var photo in photos)
+                {
+                    <img src="@Url.Content(photo.ImagePath)"
+                         alt="Property photo"
+                         loading="lazy" />
+                }
+            </div>
+        }
+        else
+        {
+            <p>No photos were uploaded for this property.</p>
+        }
+    </div>
+
+    <!-- ADMIN MODERATION ACTIONS -->
+
+    <div class="review-panel">
+
+        <h2>Admin Decision</h2>
+
+        <p>
+            Review the property information, description,
+            and photos before approving or rejecting this listing.
+        </p>
+
+        @if (Model.Status == ListingStatus.PendingApproval)
+        {
+            <!-- APPROVE PROPERTY -->
+
+            <div class="review-actions">
+
+                <form asp-area="Admin"
+                      asp-controller="Listings"
+                      asp-action="Approve"
+                      asp-route-id="@Model.Id"
+                      method="post">
+
+                    @Html.AntiForgeryToken()
+
+                    <button type="submit"
+                            class="review-approve">
+                        <i class="bi bi-check-circle"></i>
+                        Approve Property
+                    </button>
+
+                </form>
+
+                <a asp-area="Admin"
+                   asp-controller="Listings"
+                   asp-action="Index"
+                   class="review-back">
+                    Back to Pending Listings
+                </a>
+
+            </div>
+
+            <!-- REJECT PROPERTY -->
+
+            <div class="rejection-section">
+
+                <h3>Reject Property</h3>
+
+                <p>
+                    Enter the reason for rejecting this property.
+                    The owner will receive this reason
+                    in their notifications.
+                </p>
+
+                <form asp-area="Admin"
+                      asp-controller="Listings"
+                      asp-action="Reject"
+                      asp-route-id="@Model.Id"
+                      method="post">
+
+                    @Html.AntiForgeryToken()
+
+                    <label for="reason">
+                        Rejection Reason *
+                    </label>
+
+                    <textarea id="reason"
+                              name="reason"
+                              required
+                              minlength="5"
+                              maxlength="2000"
+                              rows="5"
+                              placeholder="Example: The property photos are unclear. Please upload better photos."></textarea>
+
+                    <div class="review-actions">
+
+                        <button type="submit"
+                                class="review-reject">
+                            <i class="bi bi-x-circle"></i>
+                            Reject Property
+                        </button>
+
+                    </div>
+
+                </form>
+
+            </div>
+
+            <p class="review-notice">
+                Approved properties become visible to marketplace users.
+                Rejected properties remain hidden, and their owners
+                receive a notification explaining the decision.
+            </p>
+        }
+        else
+        {
+            <div class="alert alert-info">
+                This listing has already been reviewed.
+            </div>
+
+            <a asp-area="Admin"
+               asp-controller="Listings"
+               asp-action="Index"
+               class="review-back">
+                Back to Pending Listings
+            </a>
+        }
+
+    </div>
+
+</div>
