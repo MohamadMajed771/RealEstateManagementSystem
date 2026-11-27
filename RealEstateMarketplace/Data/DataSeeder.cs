@@ -1,3 +1,4 @@
+using RealEstateMarketplace.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -30,6 +31,8 @@ namespace RealEstateMarketplace.Data
             {
                 await roleManager.CreateAsync(new IdentityRole(AdminRole));
             }
+
+            await SeedPromotionPlansAsync(sp.GetRequiredService<ApplicationDbContext>());
 
             var config = sp.GetRequiredService<IConfiguration>();
             var email = config["SeedAdmin:Email"];
@@ -65,6 +68,30 @@ namespace RealEstateMarketplace.Data
             {
                 await userManager.AddToRoleAsync(admin, AdminRole);
             }
+        }
+
+        private static async Task SeedPromotionPlansAsync(ApplicationDbContext db)
+        {
+            if (await db.PromotionPlans.AnyAsync()) return;
+
+            db.PromotionPlans.AddRange(
+                new PromotionPlan
+                {
+                    Name = "Featured Week", Level = PromotionLevel.Featured, DurationDays = 7, Price = 9.99m,
+                    Description = "Shown first in search results and on the map for 7 days with a Featured badge."
+                },
+                new PromotionPlan
+                {
+                    Name = "Spotlight Fortnight", Level = PromotionLevel.Spotlight, DurationDays = 14, Price = 17.99m,
+                    Description = "Two weeks at the top of search results and on the map."
+                },
+                new PromotionPlan
+                {
+                    Name = "Premium Month", Level = PromotionLevel.Premium, DurationDays = 30, Price = 29.99m,
+                    Description = "A full month at the top of search results. Best value."
+                });
+
+            await db.SaveChangesAsync();
         }
     }
 }

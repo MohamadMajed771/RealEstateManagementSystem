@@ -1,4 +1,4 @@
-﻿
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -108,6 +108,15 @@
 
                                     <i class="bi bi-chat-dots me-1"></i>
                                     My Messages
+                                </a>
+                            </li>
+                        }
+
+                        @if (User.IsInRole("Admin"))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link fw-semibold text-danger" href="~/Admin/Dashboard">
+                                    Admin
                                 </a>
                             </li>
                         }

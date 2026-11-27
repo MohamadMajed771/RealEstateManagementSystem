@@ -1,0 +1,25 @@
+@model Payment
+@{ ViewData["Title"] = "Payment receipt"; var promo = Model.ListingPromotion; }
+
+<div class="container py-4" style="max-width:640px">
+    <div class="alert alert-success">
+        <h4 class="alert-heading mb-1">Payment successful</h4>
+        “@promo.PropertyListing.Title” is featured from
+        @promo.StartDate?.ToLocalTime().ToString("g") to @promo.EndDate?.ToLocalTime().ToString("g").
+    </div>
+
+    <table class="table bg-white">
+        <tr><th>Receipt</th><td>#@Model.Id</td></tr>
+        <tr><th>Reference</th><td><code>@Model.ProviderTransactionId</code></td></tr>
+        <tr><th>Plan</th><td>@promo.PromotionPlan.Name (@promo.DurationDays days)</td></tr>
+        <tr><th>Amount</th><td>@Model.Amount.ToString("N2") @Model.Currency</td></tr>
+        <tr><th>Paid at</th><td>@Model.PaidAt?.ToLocalTime().ToString("f")</td></tr>
+        <tr><th>Method</th><td>Test payment gateway</td></tr>
+    </table>
+
+    <div class="d-flex gap-2">
+        <a asp-controller="Properties" asp-action="Details" asp-route-id="@promo.PropertyListingId" class="btn btn-primary">View listing</a>
+        <a asp-action="MyPayments" class="btn btn-outline-secondary">My payments</a>
+        <button onclick="window.print()" class="btn btn-outline-secondary">Print</button>
+    </div>
+</div>

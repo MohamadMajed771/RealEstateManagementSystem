@@ -1,4 +1,4 @@
-﻿
+
 @model RealEstateMarketplace.Models.ApplicationUser
 
 @{
@@ -113,6 +113,20 @@
                            asp-action="MyRequests"
                            class="btn btn-outline-success">
                             My Requests
+                        </a>
+
+                        <!-- Promotion payments -->
+                        <a asp-controller="Promotions"
+                           asp-action="MyPayments"
+                           class="btn btn-outline-warning">
+                            My Payments
+                        </a>
+
+                        <!-- Transactions & reviews -->
+                        <a asp-controller="Transactions"
+                           asp-action="MyTransactions"
+                           class="btn btn-outline-dark">
+                            Transactions &amp; Reviews
                         </a>
 
                         <!-- Change Password -->

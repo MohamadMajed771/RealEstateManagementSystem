@@ -20,6 +20,8 @@ builder.Services.AddScoped<SavedSearchNotificationService>();
 
 builder.Services.AddScoped<PropertySearchService>();
 builder.Services.AddScoped<UserModerationService>();
+builder.Services.AddSingleton<RealEstateMarketplace.Services.Payments.DummyPaymentGateway>();
+builder.Services.AddHostedService<RealEstateMarketplace.Services.Payments.PromotionExpiryService>();
 
 // ==========================================
 // RABBITMQ (System 1 <-> System 2)

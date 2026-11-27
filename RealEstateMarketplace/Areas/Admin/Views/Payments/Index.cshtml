@@ -1,0 +1,61 @@
+@model List<Payment>
+@{
+    ViewData["Title"] = "Promotion payments";
+    PaymentStatus? status = ViewBag.Status;
+    string? from = ViewBag.From, to = ViewBag.To;
+    var exportQuery = $"?status={status}&from={from}&to={to}";
+}
+
+<div class="container-xl py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <h2 class="mb-0">Promotion payments</h2>
+        <div class="d-flex gap-2">
+            <a class="btn btn-sm btn-outline-success" href="@Url.Content("~/Admin/Export/Payments")@exportQuery&format=xlsx">Export Excel</a>
+            <a class="btn btn-sm btn-outline-danger" href="@Url.Content("~/Admin/Export/Payments")@exportQuery&format=pdf">Export PDF</a>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-md-4"><div class="card card-body"><div class="text-muted small">Revenue (succeeded, filtered)</div><div class="fs-3 fw-bold">@(((decimal)ViewBag.Revenue).ToString("N2")) USD</div></div></div>
+        <div class="col-md-4"><div class="card card-body"><div class="text-muted small">Payments shown</div><div class="fs-3 fw-bold">@Model.Count</div></div></div>
+        <div class="col-md-4"><div class="card card-body"><div class="text-muted small">Promotions running now</div><div class="fs-3 fw-bold">@ViewBag.ActivePromotions</div></div></div>
+    </div>
+
+    <form method="get" class="row g-2 mb-3">
+        <div class="col-md-3">
+            <select name="status" class="form-select">
+                <option value="">All statuses</option>
+                @foreach (var s in Enum.GetValues<PaymentStatus>())
+                {
+                    <option value="@s" selected="@(status == s)">@s</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-3"><input type="date" name="from" value="@from" class="form-control" /></div>
+        <div class="col-md-3"><input type="date" name="to" value="@to" class="form-control" /></div>
+        <div class="col-md-3"><button class="btn btn-primary w-100">Filter</button></div>
+    </form>
+
+    <div class="table-responsive">
+        <table class="table table-sm bg-white align-middle">
+            <thead class="table-light">
+                <tr><th>#</th><th>Date</th><th>Owner</th><th>Listing</th><th>Plan</th><th class="text-end">Amount</th><th>Status</th><th>Reference</th></tr>
+            </thead>
+            <tbody>
+            @foreach (var p in Model)
+            {
+                <tr>
+                    <td>@p.Id</td>
+                    <td class="small">@p.CreatedAt.ToLocalTime().ToString("g")</td>
+                    <td class="small">@p.User.Email</td>
+                    <td>@p.ListingPromotion.PropertyListing.Title</td>
+                    <td>@p.ListingPromotion.PromotionPlan.Name</td>
+                    <td class="text-end">@p.Amount.ToString("N2") @p.Currency</td>
+                    <td><span class="badge @(p.Status == PaymentStatus.Succeeded ? "bg-success" : p.Status == PaymentStatus.Failed ? "bg-danger" : "bg-secondary")">@p.Status</span></td>
+                    <td class="small"><code>@p.ProviderTransactionId</code> @p.FailureReason</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</div>
