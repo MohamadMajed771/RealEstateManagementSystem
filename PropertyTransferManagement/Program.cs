@@ -1,9 +1,17 @@
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
 using PropertyTransferManagement.Data;
 using PropertyTransferManagement.Models;
+using PropertyTransferManagement.Services;
+using PropertyTransferManagement.Services.Messaging;
+using SharedContracts.Messaging;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// ==========================================
+// DATABASE (PropertyTransferDB)
+// ==========================================
 
 var connectionString = builder.Configuration
     .GetConnectionString("DefaultConnection")
@@ -15,16 +23,55 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
+// ==========================================
+// IDENTITY (separate from the Marketplace)
+// ==========================================
+
 builder.Services.AddDefaultIdentity<ApplicationUser>(options =>
 {
     options.SignIn.RequireConfirmedAccount = true;
+    options.User.RequireUniqueEmail = true;
 })
 .AddRoles<IdentityRole>()
 .AddEntityFrameworkStores<ApplicationDbContext>();
 
+// Real SMTP when SmtpSettings are configured, otherwise
+// emails (verification links) are printed to the console.
+if (!string.IsNullOrWhiteSpace(builder.Configuration["SmtpSettings:Host"]))
+{
+    builder.Services.AddTransient<IEmailSender, SmtpEmailSender>();
+}
+else
+{
+    builder.Services.AddTransient<IEmailSender, ConsoleEmailSender>();
+}
+
+// ==========================================
+// APPLICATION SERVICES
+// ==========================================
+
+builder.Services.AddScoped<CaseService>();
+builder.Services.AddSingleton<DocumentStorage>();
+
 builder.Services.AddControllersWithViews();
 
+// ==========================================
+// RABBITMQ (System 1 <-> System 2)
+// ==========================================
+
+builder.Services.AddRabbitMqMessaging(
+    builder.Configuration, "PropertyTransferManagement");
+
+// Receives TransferRequested / TransferCancelled
+builder.Services.AddHostedService<TransferRequestsConsumer>();
+
+// Publishes TransferCaseCreated, TransferStatusChanged, ...
+builder.Services.AddHostedService<OutboxPublisherService>();
+
 var app = builder.Build();
+
+// Migrations (development), roles, document types, staff accounts
+await DataSeeder.SeedAsync(app.Services, app.Environment.IsDevelopment());
 
 if (app.Environment.IsDevelopment())
 {

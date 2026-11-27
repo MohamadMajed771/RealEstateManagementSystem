@@ -1181,6 +1181,24 @@ namespace PropertyTransferManagement.Data.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<string>("AssignedOfficerId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("BuyerEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("BuyerFullName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("CaseNumber")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
                     b.Property<string>("City")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -1220,13 +1238,40 @@ namespace PropertyTransferManagement.Data.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
+                    b.Property<string>("PropertyType")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("SellerEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("SellerFullName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<decimal?>("SizeSquareMeters")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<int>("Status")
                         .HasColumnType("int");
+
+                    b.Property<string>("StreetAddress")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AssignedOfficerId");
+
+                    b.HasIndex("CaseNumber")
+                        .IsUnique();
 
                     b.HasIndex("MarketplaceTransferRequestId")
                         .IsUnique();
@@ -1609,6 +1654,16 @@ namespace PropertyTransferManagement.Data.Migrations
                     b.Navigation("PaidByUser");
 
                     b.Navigation("TransferCase");
+                });
+
+            modelBuilder.Entity("PropertyTransferManagement.Models.TransferCase", b =>
+                {
+                    b.HasOne("PropertyTransferManagement.Models.ApplicationUser", "AssignedOfficer")
+                        .WithMany()
+                        .HasForeignKey("AssignedOfficerId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.Navigation("AssignedOfficer");
                 });
 
             modelBuilder.Entity("PropertyTransferManagement.Models.CaseConversation", b =>

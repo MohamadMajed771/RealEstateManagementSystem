@@ -1,0 +1,47 @@
+@model List<OfficerOption>
+@{
+    ViewData["Title"] = "Officers";
+}
+
+<h2 class="mb-3">Case Officers</h2>
+
+<partial name="_Alerts" />
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <table class="table align-middle">
+            <thead class="table-light"><tr><th>Officer</th><th>Active cases</th></tr></thead>
+            <tbody>
+                @foreach (var o in Model)
+                {
+                    <tr><td>@o.Name</td><td>@o.ActiveCases</td></tr>
+                }
+                @if (Model.Count == 0)
+                {
+                    <tr><td colspan="2" class="text-muted">No officers yet.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card">
+            <div class="card-header fw-semibold">Create officer account</div>
+            <div class="card-body">
+                <form asp-action="CreateOfficer" method="post">
+                    <div class="row g-2">
+                        <div class="col-6"><input name="firstName" class="form-control" placeholder="First name" required maxlength="50" /></div>
+                        <div class="col-6"><input name="lastName" class="form-control" placeholder="Last name" required maxlength="50" /></div>
+                        <div class="col-12"><input name="email" type="email" class="form-control" placeholder="Work email" required /></div>
+                        <div class="col-12"><input name="employeeNumber" class="form-control" placeholder="Employee number (optional)" maxlength="50" /></div>
+                        <div class="col-12">
+                            <input name="password" type="password" class="form-control" placeholder="Initial password" required autocomplete="new-password" />
+                            <div class="form-text">At least 6 characters with upper/lower case, a digit and a symbol.</div>
+                        </div>
+                        <div class="col-12"><button class="btn btn-primary w-100">Create officer</button></div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

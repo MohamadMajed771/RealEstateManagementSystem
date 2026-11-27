@@ -437,3 +437,5 @@ FodyWeavers.xsd
 
 # User-uploaded property images
 RealEstateMarketplace/wwwroot/uploads/properties/
+# Uploaded transfer-case documents (stored outside wwwroot)
+PropertyTransferManagement/App_Data/

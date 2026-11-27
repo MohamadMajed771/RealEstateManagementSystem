@@ -56,6 +56,10 @@ namespace SharedContracts.Messaging
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            // Connecting is synchronous: leave the startup path first
+            // so a down broker never delays the web application.
+            await Task.Yield();
+
             // RabbitMQ may start after the web app: keep trying.
             while (!stoppingToken.IsCancellationRequested && _channel == null)
             {

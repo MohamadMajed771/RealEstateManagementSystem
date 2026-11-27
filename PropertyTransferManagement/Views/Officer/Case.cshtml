@@ -1,0 +1,216 @@
+@model OfficerCaseViewModel
+@{
+    var c = Model.Case;
+    ViewData["Title"] = c.CaseNumber;
+
+    string PartyStatus(CaseParticipantRole role) =>
+        Model.Participants.Any(p => p.Role == role) ? "Signed in" :
+        Model.Invitations.Any(i => i.IntendedRole == role && i.Status == CaseInvitationStatus.Pending)
+            ? "Invited (no account yet)" : "—";
+}
+
+<div class="d-flex justify-content-between align-items-start mb-3">
+    <div>
+        <h2 class="mb-1">Case @c.CaseNumber</h2>
+        <div class="text-muted">@c.PropertyTitle — @c.City, @c.Country</div>
+    </div>
+    <span class="badge fs-6 @CaseWorkflow.BadgeClass(c.Status)">@CaseWorkflow.Display(c.Status)</span>
+</div>
+
+<partial name="_Alerts" />
+
+<div class="row g-4">
+    <div class="col-lg-8">
+
+        <!-- DOCUMENTS -->
+        <div class="card mb-4">
+            <div class="card-header fw-semibold">Required documents</div>
+            <ul class="list-group list-group-flush">
+                @foreach (var r in Model.Requirements)
+                {
+                    var docs = Model.Documents.Where(d => d.CaseDocumentRequirementId == r.Id).ToList();
+                    var current = docs.FirstOrDefault(d => d.Status != CaseDocumentStatus.Superseded);
+
+                    <li class="list-group-item">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <span class="fw-semibold">@r.DocumentType.Name</span>
+                                <span class="text-muted small">· from @r.RequiredFromRole.ToString().ToLower()</span>
+                            </div>
+                            <span class="badge bg-light text-dark border">@r.Status</span>
+                        </div>
+
+                        @if (current == null)
+                        {
+                            <div class="small text-muted mt-1">Not uploaded yet.</div>
+                        }
+                        else
+                        {
+                            <div class="small mt-1">
+                                <a asp-controller="Cases" asp-action="Download" asp-route-id="@current.Id" target="_blank">
+                                    @current.OriginalFileName
+                                </a>
+                                · v@(current.Version) · @(current.FileSizeBytes / 1024) KB
+                                · uploaded @current.UploadedAt.ToLocalTime().ToString("g")
+                                · <strong>@current.Status</strong>
+                            </div>
+
+                            @foreach (var review in current.Reviews.OrderBy(rv => rv.ReviewedAt))
+                            {
+                                <div class="small text-muted">Review: @review.Decision @(review.Comments == null ? "" : $"— {review.Comments}")</div>
+                            }
+
+                            @if (current.Status == CaseDocumentStatus.PendingReview)
+                            {
+                                <form asp-action="ReviewDocument" method="post" class="row g-2 mt-2">
+                                    <input type="hidden" name="documentId" value="@current.Id" />
+                                    <div class="col-md-6">
+                                        <input name="comments" class="form-control form-control-sm"
+                                               placeholder="Reason (required to reject)" maxlength="2000" />
+                                    </div>
+                                    <div class="col-md-6 d-flex gap-1">
+                                        <button name="decision" value="@DocumentReviewDecision.Approved" class="btn btn-sm btn-success">Accept</button>
+                                        <button name="decision" value="@DocumentReviewDecision.RequestReplacement" class="btn btn-sm btn-warning">Replacement required</button>
+                                        <button name="decision" value="@DocumentReviewDecision.Rejected" class="btn btn-sm btn-outline-danger">Reject</button>
+                                    </div>
+                                </form>
+                            }
+
+                            @if (docs.Count > 1)
+                            {
+                                <div class="small text-muted mt-1">Earlier versions: @(docs.Count - 1)</div>
+                            }
+                        }
+                    </li>
+                }
+            </ul>
+        </div>
+
+        <!-- HISTORY -->
+        <div class="card mb-4">
+            <div class="card-header fw-semibold">Status history</div>
+            <ul class="list-group list-group-flush small">
+                @foreach (var h in Model.History)
+                {
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>
+                            <strong>@CaseWorkflow.Display(h.NewStatus)</strong>
+                            @if (!string.IsNullOrWhiteSpace(h.Reason)) { <span class="text-muted">— @h.Reason</span> }
+                        </span>
+                        <span class="text-muted text-nowrap ms-2">
+                            @(h.ChangedByUser?.Email ?? "System") · @h.ChangedAt.ToLocalTime().ToString("g")
+                        </span>
+                    </li>
+                }
+            </ul>
+        </div>
+
+        <!-- AUDIT -->
+        <div class="card">
+            <div class="card-header fw-semibold">Activity log</div>
+            <div class="table-responsive">
+                <table class="table table-sm mb-0 small">
+                    <thead><tr><th>When</th><th>Who</th><th>Action</th><th>Details</th></tr></thead>
+                    <tbody>
+                        @foreach (var a in Model.AuditLog)
+                        {
+                            <tr>
+                                <td class="text-nowrap">@a.CreatedAt.ToLocalTime().ToString("g")</td>
+                                <td>@(a.User?.Email ?? "System")</td>
+                                <td>@a.Action</td>
+                                <td>@a.Description</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <!-- STATUS -->
+        <div class="card mb-4">
+            <div class="card-header fw-semibold">Update status</div>
+            <div class="card-body">
+                @if (Model.NextStatuses.Count == 0)
+                {
+                    <div class="text-muted small">This case is closed.</div>
+                }
+                else
+                {
+                    <form asp-action="ChangeStatus" method="post">
+                        <input type="hidden" name="id" value="@c.Id" />
+                        <select name="newStatus" class="form-select form-select-sm mb-2">
+                            @foreach (var s in Model.NextStatuses)
+                            {
+                                <option value="@s">@CaseWorkflow.Display(s)</option>
+                            }
+                        </select>
+                        <textarea name="reason" class="form-control form-control-sm mb-2" rows="2" maxlength="2000"
+                                  placeholder="Note / reason (shown to buyer and seller)"></textarea>
+                        <button class="btn btn-sm btn-primary w-100">Save status</button>
+                    </form>
+                    @if (Model.AllMandatoryApproved && c.Status == TransferCaseStatus.DocumentsUnderReview)
+                    {
+                        <div class="small text-success mt-2">All mandatory documents accepted — the case can move to Ready for Processing.</div>
+                    }
+                }
+            </div>
+        </div>
+
+        <!-- OFFICIAL CONFIRMATION -->
+        @if (c.Status == TransferCaseStatus.ExternalProcessingInProgress)
+        {
+            <div class="card mb-4 border-success">
+                <div class="card-header fw-semibold">Record official completion</div>
+                <div class="card-body">
+                    <p class="small text-muted">
+                        Only record this when the competent authority has completed the transfer and
+                        you hold its confirmation.
+                    </p>
+                    <form asp-action="RecordConfirmation" method="post" enctype="multipart/form-data">
+                        <input type="hidden" name="id" value="@c.Id" />
+                        <input name="authorityName" class="form-control form-control-sm mb-2" required maxlength="200"
+                               placeholder="Authority (e.g. Land Registry)" />
+                        <input name="referenceNumber" class="form-control form-control-sm mb-2" required maxlength="150"
+                               placeholder="Official reference number" />
+                        <input name="confirmationDate" type="date" class="form-control form-control-sm mb-2" required
+                               max="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                        <label class="form-label small mb-1">Evidence (optional, PDF/JPG/PNG)</label>
+                        <input name="evidence" type="file" class="form-control form-control-sm mb-2" accept=".pdf,.jpg,.jpeg,.png" />
+                        <button class="btn btn-sm btn-success w-100"
+                                onclick="return confirm('Record official completion? The Marketplace will be notified.');">
+                            Record official completion
+                        </button>
+                    </form>
+                </div>
+            </div>
+        }
+
+        @if (Model.Confirmation != null)
+        {
+            <div class="alert alert-success small">
+                <strong>Official completion</strong><br />
+                @Model.Confirmation.AuthorityName — ref. @Model.Confirmation.OfficialReferenceNumber<br />
+                @Model.Confirmation.OfficialConfirmationDate?.ToString("d")
+            </div>
+        }
+
+        <!-- CASE INFO -->
+        <div class="card">
+            <div class="card-header fw-semibold">Case information</div>
+            <div class="card-body small">
+                <dl class="row mb-0">
+                    <dt class="col-5">Agreed price</dt><dd class="col-7">@c.AgreedPrice.ToString("N0") @c.Currency</dd>
+                    <dt class="col-5">Property</dt><dd class="col-7">@c.PropertyType, @(c.SizeSquareMeters?.ToString("N0")) m²</dd>
+                    <dt class="col-5">Address</dt><dd class="col-7">@c.StreetAddress @c.Area, @c.City, @c.Country</dd>
+                    <dt class="col-5">Buyer</dt><dd class="col-7">@c.BuyerFullName<br /><span class="text-muted">@c.BuyerEmail · @PartyStatus(CaseParticipantRole.Buyer)</span></dd>
+                    <dt class="col-5">Seller</dt><dd class="col-7">@c.SellerFullName<br /><span class="text-muted">@c.SellerEmail · @PartyStatus(CaseParticipantRole.Seller)</span></dd>
+                    <dt class="col-5">Officer</dt><dd class="col-7">@(c.AssignedOfficer?.Email ?? "Unassigned")</dd>
+                    <dt class="col-5">Marketplace ref.</dt><dd class="col-7">Transaction #@c.MarketplaceTransactionId</dd>
+                    <dt class="col-5">Opened</dt><dd class="col-7">@c.CreatedAt.ToLocalTime().ToString("g")</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>

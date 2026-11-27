@@ -133,6 +133,12 @@ namespace RealEstateMarketplace.Services.Messaging
                 request.UpdatedAt = now;
                 request.ExternalStatusUpdatedAt = now;
             }
+            else if (evt is TransferStatusChanged closed)
+            {
+                // e.g. "Case Closed" after completion: show it, nothing else changes.
+                request.ExternalStatus = closed.NewStatus;
+                request.ExternalStatusUpdatedAt = now;
+            }
 
             db.InboxMessages.Add(new InboxMessage
             {
