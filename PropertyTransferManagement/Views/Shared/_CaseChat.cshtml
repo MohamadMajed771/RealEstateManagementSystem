@@ -1,0 +1,47 @@
+@model List<PropertyTransferManagement.Services.ConversationSummary>
+@using System.Security.Claims
+@{
+    var me = User.FindFirstValue(ClaimTypes.NameIdentifier);
+}
+
+<div class="card shadow-sm mb-4" id="caseChat" data-me="@me">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <strong>Messages</strong>
+        <span class="small text-muted" id="chatState">connecting…</span>
+    </div>
+
+    @if (Model.Count == 0)
+    {
+        <div class="card-body text-muted small">
+            Chat is available to the buyer, the seller and the case officer once an officer is assigned.
+        </div>
+    }
+    else
+    {
+        <div class="card-body p-0">
+            <ul class="nav nav-tabs px-2 pt-2" role="tablist">
+                @for (int i = 0; i < Model.Count; i++)
+                {
+                    var c = Model[i];
+                    <li class="nav-item">
+                        <button type="button" class="nav-link @(i == 0 ? "active" : "")" data-conversation="@c.Id">
+                            @c.Title
+                            @if (c.Unread > 0) { <span class="badge bg-danger ms-1 unread">@c.Unread</span> }
+                        </button>
+                    </li>
+                }
+            </ul>
+
+            <div id="chatMessages" class="p-3" style="height:340px; overflow-y:auto; background:#f8fafc"></div>
+
+            <form id="chatForm" class="d-flex gap-2 p-2 border-top" autocomplete="off">
+                <textarea id="chatInput" class="form-control" rows="1" maxlength="3000"
+                          placeholder="Write a message… (Enter to send, Shift+Enter for a new line)"></textarea>
+                <button class="btn btn-primary" id="chatSend" disabled>Send</button>
+            </form>
+            <div class="px-3 pb-2 small text-muted">
+                Messages are visible only to the people in this conversation and to the case officer.
+            </div>
+        </div>
+    }
+</div>

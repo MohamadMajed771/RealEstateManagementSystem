@@ -1,4 +1,5 @@
 using PropertyTransferManagement.Models;
+using PropertyTransferManagement.Services;
 
 namespace PropertyTransferManagement.ViewModels
 {
@@ -20,6 +21,11 @@ namespace PropertyTransferManagement.ViewModels
         public List<CaseDocument> MyDocuments { get; set; } = new();
         public List<CaseStatusHistory> History { get; set; } = new();
         public bool CanUpload { get; set; }
+
+        public List<ConversationSummary> Conversations { get; set; } = new();
+        public List<CaseAppointment> Appointments { get; set; } = new();
+        public List<LoanAssistanceRequest> MyLoanRequests { get; set; } = new();
+        public List<ServicePayment> MyPayments { get; set; } = new();
     }
 
     /// <summary>Case page for the assigned officer / admin.</summary>
@@ -35,6 +41,11 @@ namespace PropertyTransferManagement.ViewModels
         public IReadOnlyList<TransferCaseStatus> NextStatuses { get; set; } = Array.Empty<TransferCaseStatus>();
         public OfficialConfirmation? Confirmation { get; set; }
         public bool AllMandatoryApproved { get; set; }
+
+        public List<ConversationSummary> Conversations { get; set; } = new();
+        public List<CaseAppointment> Appointments { get; set; } = new();
+        public List<LoanAssistanceRequest> LoanRequests { get; set; } = new();
+        public List<ServicePayment> Payments { get; set; } = new();
     }
 
     public class OfficerOption

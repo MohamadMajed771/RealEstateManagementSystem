@@ -1,4 +1,4 @@
-﻿
+
 using System.ComponentModel.DataAnnotations;
 
 namespace PropertyTransferManagement.Models
@@ -46,6 +46,12 @@ namespace PropertyTransferManagement.Models
 
         public ApplicationUser? CreatedByUser { get; set; }
 
+        /// <summary>Who must attend (besides the officer).</summary>
+        public CaseAppointmentAudience Audience { get; set; } = CaseAppointmentAudience.BuyerAndSeller;
+
+        /// <summary>Set when the 24-hour reminder was sent.</summary>
+        public DateTime? ReminderSentAt { get; set; }
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public DateTime? UpdatedAt { get; set; }
@@ -78,5 +84,12 @@ namespace PropertyTransferManagement.Models
         Cancelled = 3,
         Rescheduled = 4,
         NoShow = 5
+    }
+
+    public enum CaseAppointmentAudience
+    {
+        Buyer = 1,
+        Seller = 2,
+        BuyerAndSeller = 3
     }
 }

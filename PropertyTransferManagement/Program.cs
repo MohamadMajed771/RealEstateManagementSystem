@@ -18,8 +18,12 @@ var connectionString = builder.Configuration
     ?? throw new InvalidOperationException(
         "Connection string 'DefaultConnection' not found.");
 
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(connectionString));
+builder.Services.AddSingleton<NotificationPushInterceptor>();
+
+builder.Services.AddDbContext<ApplicationDbContext>((sp, options) =>
+    options.UseSqlServer(connectionString)
+        // pushes new notifications live over SignalR after each save
+        .AddInterceptors(sp.GetRequiredService<NotificationPushInterceptor>()));
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
@@ -51,6 +55,14 @@ else
 // ==========================================
 
 builder.Services.AddScoped<CaseService>();
+builder.Services.AddScoped<CaseChatService>();
+builder.Services.AddScoped<CaseAccess>();
+builder.Services.AddScoped<CaseEmailer>();
+builder.Services.AddSingleton<PropertyTransferManagement.Services.Payments.DummyPaymentGateway>();
+builder.Services.AddHostedService<AppointmentReminderService>();
+
+// SignalR: case chat + live notifications
+builder.Services.AddSignalR();
 builder.Services.AddSingleton<DocumentStorage>();
 
 builder.Services.AddControllersWithViews();
@@ -99,5 +111,8 @@ app.MapControllerRoute(
 
 app.MapRazorPages()
     .WithStaticAssets();
+
+app.MapHub<PropertyTransferManagement.Hubs.CaseChatHub>("/hubs/case-chat");
+app.MapHub<PropertyTransferManagement.Hubs.NotificationHub>("/hubs/notifications");
 
 app.Run();

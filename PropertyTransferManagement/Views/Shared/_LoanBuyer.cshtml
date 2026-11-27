@@ -1,0 +1,59 @@
+@model (List<LoanAssistanceRequest> Items, TransferCase Case)
+
+<div class="card shadow-sm mb-4">
+    <div class="card-header fw-semibold">Housing-loan assistance <span class="badge bg-light text-muted border fw-normal">optional</span></div>
+    <div class="card-body">
+        <p class="small text-muted">
+            We help you put your financing file together and send it to a lender. We do not approve loans:
+            only the bank or lender decides.
+        </p>
+
+        @foreach (var r in Model.Items)
+        {
+            <div class="border rounded p-2 mb-2">
+                <div class="d-flex justify-content-between">
+                    <strong>@r.RequestedAmount.ToString("N0") @r.Currency</strong>
+                    <span class="badge bg-info text-dark">@CaseExtrasDisplay.Loan(r.Status)</span>
+                </div>
+                <div class="small text-muted">Requested @r.CreatedAt.ToLocalTime().ToString("d")@(r.LenderName != null ? $" · lender: {r.LenderName}" : "")</div>
+                @if (r.LenderDecision != null) { <div class="small fw-semibold">@CaseExtrasDisplay.Lender(r.LenderDecision)</div> }
+                @if (r.ReviewNotes != null) { <div class="small mt-1">Officer: @r.ReviewNotes</div> }
+
+                @if (CaseExtrasDisplay.LoanIsOpen(r.Status))
+                {
+                    <form asp-controller="Loans" asp-action="Respond" asp-route-id="@r.Id" method="post" class="d-flex gap-1 mt-2">
+                        <input name="additionalInformation" class="form-control form-control-sm" maxlength="1000"
+                               placeholder="@(r.Status == LoanAssistanceStatus.InformationRequested ? "Answer the officer's request" : "Add information")" />
+                        <button class="btn btn-sm btn-outline-primary">Send</button>
+                        <button class="btn btn-sm btn-outline-danger" name="cancel" value="true" formnovalidate
+                                onclick="return confirm('Cancel this loan-assistance request?');">Cancel</button>
+                    </form>
+                }
+            </div>
+        }
+
+        @if (!Model.Items.Any(r => CaseExtrasDisplay.LoanIsOpen(r.Status)) && !CaseWorkflow.IsFinished(Model.Case.Status))
+        {
+            <details>
+                <summary class="fw-semibold">Request loan assistance</summary>
+                <form asp-controller="Loans" asp-action="Submit" method="post" class="row g-2 mt-1">
+                    <input type="hidden" name="caseId" value="@Model.Case.Id" />
+                    <div class="col-md-6">
+                        <label class="form-label small mb-0">Amount to finance (@Model.Case.Currency)</label>
+                        <input name="requestedAmount" type="number" min="1" max="@Model.Case.AgreedPrice" step="1" class="form-control form-control-sm" required />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small mb-0">Preferred bank (optional)</label>
+                        <input name="preferredBank" class="form-control form-control-sm" maxlength="200" />
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label small mb-0">Financial information</label>
+                        <textarea name="additionalInformation" rows="3" class="form-control form-control-sm" maxlength="2000"
+                                  placeholder="Employment, monthly income, down payment you have… (no card or account numbers)"></textarea>
+                    </div>
+                    <div class="col-12"><button class="btn btn-sm btn-primary">Submit request</button></div>
+                </form>
+            </details>
+        }
+    </div>
+</div>

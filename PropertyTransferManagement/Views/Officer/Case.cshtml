@@ -125,6 +125,13 @@
                 </table>
             </div>
         </div>
+        <partial name="_CaseChat" model="Model.Conversations" />
+
+        <partial name="_CaseAppointments" model="(Model.Appointments, true, c.Id)" />
+
+        <partial name="_LoanOfficer" model="Model.LoanRequests" />
+
+        <partial name="_ServicesPanel" model="(Model.Payments, c, true)" />
     </div>
 
     <div class="col-lg-4">
@@ -214,3 +221,7 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script src="~/js/case-chat.js" asp-append-version="true"></script>
+}

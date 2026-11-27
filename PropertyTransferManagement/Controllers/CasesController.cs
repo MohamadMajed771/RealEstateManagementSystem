@@ -29,17 +29,20 @@ namespace PropertyTransferManagement.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly CaseService _cases;
         private readonly DocumentStorage _storage;
+        private readonly CaseChatService _chat;
 
         public CasesController(
             ApplicationDbContext db,
             UserManager<ApplicationUser> userManager,
             CaseService cases,
-            DocumentStorage storage)
+            DocumentStorage storage,
+            CaseChatService chat)
         {
             _db = db;
             _userManager = userManager;
             _cases = cases;
             _storage = storage;
+            _chat = chat;
         }
 
         // GET: /Cases
@@ -101,8 +104,26 @@ namespace PropertyTransferManagement.Controllers
                 .Include(c => c.AssignedOfficer)
                 .FirstAsync(c => c.Id == id);
 
+            await _chat.EnsureConversationsAsync(id);
+            await _db.SaveChangesAsync();
+
+            var appointments = await _db.CaseAppointments
+                .AsNoTracking()
+                .Where(a => a.TransferCaseId == id)
+                .OrderBy(a => a.StartAt)
+                .ToListAsync();
+
             var vm = new CaseDetailsViewModel
             {
+                Conversations = await _chat.MyConversationsAsync(id, userId),
+                Appointments = appointments.Where(a => CaseExtrasDisplay.Concerns(a, roles)).ToList(),
+                MyLoanRequests = await _db.LoanAssistanceRequests.AsNoTracking()
+                    .Where(r => r.TransferCaseId == id && r.RequestedByUserId == userId)
+                    .OrderByDescending(r => r.CreatedAt).ToListAsync(),
+                MyPayments = await _db.ServicePayments.AsNoTracking()
+                    .Where(p => p.TransferCaseId == id && p.PaidByUserId == userId)
+                    .OrderByDescending(p => p.CreatedAt).ToListAsync(),
+
                 Case = transferCase,
                 MyRoles = roles,
                 OfficerName = transferCase.AssignedOfficer == null ? null : FullName(transferCase.AssignedOfficer),

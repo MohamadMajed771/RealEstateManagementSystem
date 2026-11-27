@@ -104,6 +104,17 @@
                 </div>
             </div>
         }
+
+        <partial name="_CaseChat" model="Model.Conversations" />
+
+        <partial name="_CaseAppointments" model="(Model.Appointments, false, c.Id)" />
+
+        @if (Model.MyRoles.Contains(CaseParticipantRole.Buyer))
+        {
+            <partial name="_LoanBuyer" model="(Model.MyLoanRequests, c)" />
+        }
+
+        <partial name="_ServicesPanel" model="(Model.MyPayments, c, false)" />
     </div>
 
     <div class="col-lg-4">
@@ -142,3 +153,7 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script src="~/js/case-chat.js" asp-append-version="true"></script>
+}

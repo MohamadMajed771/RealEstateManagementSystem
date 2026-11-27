@@ -23,17 +23,20 @@ namespace PropertyTransferManagement.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly CaseService _cases;
         private readonly DocumentStorage _storage;
+        private readonly CaseChatService _chat;
 
         public OfficerController(
             ApplicationDbContext db,
             UserManager<ApplicationUser> userManager,
             CaseService cases,
-            DocumentStorage storage)
+            DocumentStorage storage,
+            CaseChatService chat)
         {
             _db = db;
             _userManager = userManager;
             _cases = cases;
             _storage = storage;
+            _chat = chat;
         }
 
         // GET: /Officer
@@ -72,8 +75,21 @@ namespace PropertyTransferManagement.Controllers
                 .OrderBy(r => r.RequiredFromRole).ThenBy(r => r.Id)
                 .ToListAsync();
 
+            await _chat.EnsureConversationsAsync(id);
+            await _db.SaveChangesAsync();
+
             var vm = new OfficerCaseViewModel
             {
+                Conversations = await _chat.MyConversationsAsync(id, _userManager.GetUserId(User)!),
+                Appointments = await _db.CaseAppointments.AsNoTracking()
+                    .Where(a => a.TransferCaseId == id).OrderBy(a => a.StartAt).ToListAsync(),
+                LoanRequests = await _db.LoanAssistanceRequests.AsNoTracking()
+                    .Include(r => r.RequestedByUser)
+                    .Where(r => r.TransferCaseId == id).OrderByDescending(r => r.CreatedAt).ToListAsync(),
+                Payments = await _db.ServicePayments.AsNoTracking()
+                    .Include(p => p.PaidByUser)
+                    .Where(p => p.TransferCaseId == id).OrderByDescending(p => p.CreatedAt).ToListAsync(),
+
                 Case = transferCase,
                 Requirements = requirements,
                 AllMandatoryApproved = requirements.Where(r => r.IsMandatory).All(r =>

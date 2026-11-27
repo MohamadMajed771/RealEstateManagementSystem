@@ -262,6 +262,9 @@ namespace PropertyTransferManagement.Data.Migrations
                     b.Property<int>("AppointmentType")
                         .HasColumnType("int");
 
+                    b.Property<int>("Audience")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -282,6 +285,9 @@ namespace PropertyTransferManagement.Data.Migrations
                     b.Property<string>("MeetingUrl")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("ReminderSentAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime>("StartAt")
                         .HasColumnType("datetime2");
@@ -420,6 +426,9 @@ namespace PropertyTransferManagement.Data.Migrations
 
                     b.Property<bool>("IsClosed")
                         .HasColumnType("bit");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("int");
 
                     b.Property<DateTime?>("LastMessageAt")
                         .HasColumnType("datetime2");
@@ -900,6 +909,16 @@ namespace PropertyTransferManagement.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(3)
                         .HasColumnType("nvarchar(3)");
+
+                    b.Property<int?>("LenderDecision")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("LenderDecisionAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("LenderName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("PreferredBank")
                         .HasMaxLength(200)

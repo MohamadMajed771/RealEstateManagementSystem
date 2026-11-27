@@ -1,0 +1,20 @@
+@model ServicePayment
+@{ ViewData["Title"] = "Receipt"; }
+
+<div class="container py-4" style="max-width:640px">
+    <div class="alert alert-success"><h4 class="alert-heading mb-0">Payment successful</h4></div>
+    <table class="table bg-white">
+        <tr><th>Receipt</th><td>#@Model.Id</td></tr>
+        <tr><th>Reference</th><td><code>@Model.ProviderTransactionId</code></td></tr>
+        <tr><th>Service</th><td>@Model.ServiceName</td></tr>
+        <tr><th>Case</th><td>@Model.TransferCase.CaseNumber</td></tr>
+        <tr><th>Amount</th><td>@Model.Amount.ToString("N2") @Model.Currency</td></tr>
+        <tr><th>Paid at</th><td>@Model.PaidAt?.ToLocalTime().ToString("f")</td></tr>
+        <tr><th>Method</th><td>Test payment gateway</td></tr>
+    </table>
+    <p class="small text-muted">Assistance service fee only — not a government tax or registration fee.</p>
+    <div class="d-flex gap-2">
+        <a asp-controller="Cases" asp-action="Details" asp-route-id="@Model.TransferCaseId" class="btn btn-primary">Back to the case</a>
+        <button onclick="window.print()" class="btn btn-outline-secondary">Print</button>
+    </div>
+</div>
