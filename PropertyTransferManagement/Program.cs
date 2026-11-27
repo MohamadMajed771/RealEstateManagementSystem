@@ -9,6 +9,9 @@ using SharedContracts.Messaging;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// QuestPDF Community licence (free for students / small organisations)
+QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
+
 // ==========================================
 // DATABASE (PropertyTransferDB)
 // ==========================================
