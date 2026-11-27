@@ -143,7 +143,7 @@ namespace PropertyTransferManagement.Controllers
             if (!await _access.IsOfficerAsync(request.TransferCaseId, User)) return Forbid();
             var back = RedirectToAction("Case", "Officer", new { id = request.TransferCaseId });
 
-            if (!CaseExtrasDisplay.LoanIsOpen(request.Status))
+            if (!CaseExtrasDisplay.LoanIsOpen(request.Status) || CaseWorkflow.IsFinished(request.TransferCase.Status))
             {
                 TempData["Error"] = "This loan-assistance request is already finished and cannot be changed.";
                 return back;
