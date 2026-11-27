@@ -59,6 +59,9 @@ every change travels as a message through RabbitMQ, so either system can be offl
 
 **One command (macOS / Linux):** `./run.sh` starts Docker, SQL Server, RabbitMQ and both apps,
 then opens them in the browser. Press Ctrl+C to stop both apps.
+`./run.sh marketplace` or `./run.sh transfer` starts only one system, so each can run in its own
+terminal and be stopped alone (e.g. to show RabbitMQ keeping messages while System 2 is down).
+Step-by-step guide with test scenarios: [docs/Run-and-Test-Guide.pdf](docs/Run-and-Test-Guide.pdf).
 
 ### Windows (SQL Server Express)
 `appsettings.json` already points at `.\SQLEXPRESS`. Install RabbitMQ (or run only the

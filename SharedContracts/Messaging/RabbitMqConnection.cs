@@ -63,10 +63,14 @@ namespace SharedContracts.Messaging
         {
             lock (_connectLock)
             {
-                if (_connection is { IsOpen: true })
-                    return _connection;
-
-                _connection?.Dispose();
+                // Once created, the connection reconnects by itself (automatic
+                // recovery) and also restores the consumers' channels. Replacing
+                // it while it recovers would leave the consumers on a dead
+                // connection, so callers just wait for the recovery.
+                if (_connection != null)
+                    return _connection.IsOpen
+                        ? _connection
+                        : throw new InvalidOperationException("RabbitMQ is not reachable; reconnecting.");
 
                 var factory = new ConnectionFactory
                 {
@@ -79,12 +83,18 @@ namespace SharedContracts.Messaging
                     NetworkRecoveryInterval = TimeSpan.FromSeconds(5)
                 };
 
-                _connection = factory.CreateConnection(_clientName);
-
-                using (var channel = _connection.CreateModel())
+                var connection = factory.CreateConnection(_clientName);
+                try
                 {
+                    using var channel = connection.CreateModel();
                     MessagingTopology.Declare(channel, Exchange);
                 }
+                catch
+                {
+                    connection.Dispose(); // try again (and declare again) next time
+                    throw;
+                }
+                _connection = connection;
 
                 _logger.LogInformation(
                     "RabbitMQ connected to {Host}:{Port} and topology declared.",
@@ -110,8 +120,9 @@ namespace SharedContracts.Messaging
             {
                 if (_publishChannel is not { IsOpen: true })
                 {
+                    var connection = GetConnection(); // throws while RabbitMQ is down; the outbox retries later
                     _publishChannel?.Dispose();
-                    _publishChannel = GetConnection().CreateModel();
+                    _publishChannel = connection.CreateModel();
                     _publishChannel.ConfirmSelect();
                 }
 
