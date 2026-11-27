@@ -38,6 +38,7 @@ namespace RealEstateMarketplace.Services.Messaging
                 nameof(AdditionalDocumentsRequired) => message.Read<AdditionalDocumentsRequired>(),
                 nameof(TransferCompleted) => message.Read<TransferCompleted>(),
                 nameof(TransferRejected) => message.Read<TransferRejected>(),
+                nameof(TransferCancellationRefused) => message.Read<TransferCancellationRefused>(),
                 _ => throw new InvalidOperationException($"Unknown event type '{message.EventType}'.")
             };
 
@@ -56,18 +57,23 @@ namespace RealEstateMarketplace.Services.Messaging
             var finished = request.Status is TransferRequestStatus.Completed
                 or TransferRequestStatus.Rejected or TransferRequestStatus.Cancelled;
 
+            // A cancel was sent and the Transfer Service has not answered yet:
+            // normal progress updates must not hide that pending request.
+            var cancelPending = request.Status == TransferRequestStatus.CancellationRequested;
+
             if (!finished)
             {
                 switch (evt)
                 {
                     case TransferCaseCreated e:
-                        request.Status = TransferRequestStatus.Accepted;
+                        if (!cancelPending) request.Status = TransferRequestStatus.Accepted;
                         request.ExternalTransferCaseId = e.CaseId;
                         request.CaseNumber = e.CaseNumber;
                         request.ExternalStatus = e.Status;
                         request.AcknowledgedAt = now;
                         transaction.Status = TransactionStatus.TransferInProgress;
 
+                        if (!cancelPending)
                         NotifyBoth(db, transaction,
                             $"Transfer case {e.CaseNumber} created",
                             $"The Transfer Service opened case {e.CaseNumber} for '{title}'. " +
@@ -84,13 +90,13 @@ namespace RealEstateMarketplace.Services.Messaging
                         transaction.UpdatedAt = now;
 
                         NotifyBoth(db, transaction,
-                            $"Transfer case {e.CaseNumber} cancelled",
+                            string.IsNullOrEmpty(e.CaseNumber) ? "Transfer request cancelled" : $"Transfer case {e.CaseNumber} cancelled",
                             $"The ownership-transfer case for '{title}' was cancelled by the Transfer Service." +
                             (string.IsNullOrWhiteSpace(e.Note) ? "" : $" Reason: {e.Note}"));
                         break;
 
                     case TransferStatusChanged e:
-                        request.Status = TransferRequestStatus.InProgress;
+                        if (!cancelPending) request.Status = TransferRequestStatus.InProgress;
                         request.ExternalStatus = e.NewStatus;
 
                         NotifyBoth(db, transaction,
@@ -128,6 +134,18 @@ namespace RealEstateMarketplace.Services.Messaging
                             $"Ownership transfer completed ({e.CaseNumber})",
                             $"Official completion of the transfer of '{title}' was recorded " +
                             $"({e.AuthorityName}, ref. {e.OfficialReferenceNumber}).");
+                        break;
+
+                    case TransferCancellationRefused e:
+                        // The case is in official processing (or finished): it goes on.
+                        request.Status = request.ExternalTransferCaseId == null
+                            ? TransferRequestStatus.Sent
+                            : TransferRequestStatus.InProgress;
+                        request.ExternalStatus = e.CurrentStatus;
+
+                        NotifyBoth(db, transaction,
+                            $"Cancellation refused ({e.CaseNumber})",
+                            $"The ownership transfer of '{title}' could not be cancelled. {e.Reason}");
                         break;
 
                     case TransferRejected e:

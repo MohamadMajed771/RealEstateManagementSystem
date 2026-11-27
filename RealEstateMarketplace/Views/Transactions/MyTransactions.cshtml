@@ -326,9 +326,12 @@
                                                 TransferRequestStatus.Rejected => "bg-danger",
                                                 TransferRequestStatus.Cancelled => "bg-danger",
                                                 TransferRequestStatus.Sent => "bg-warning text-dark",
+                                                TransferRequestStatus.CancellationRequested => "bg-warning text-dark",
                                                 _ => "bg-info text-dark"
                                             })">
-                                                @(transferRequest.ExternalStatus != null
+                                                @(transferRequest.Status == TransferRequestStatus.CancellationRequested
+                                                    ? "Cancellation requested — waiting for the Transfer Service"
+                                                    : transferRequest.ExternalStatus != null
                                                     ? TransferStatusText.Humanize(transferRequest.ExternalStatus)
                                                     : transferRequest.Status == TransferRequestStatus.Sent
                                                         ? "Waiting for Transfer Service"
@@ -370,6 +373,15 @@
                                         }
 
                                         @if (transferRequest.Status is TransferRequestStatus.Sent
+                                                 or TransferRequestStatus.Accepted
+                                                 or TransferRequestStatus.InProgress
+                                             && transferRequest.ExternalStatus is "ReadyForProcessing" or "ExternalProcessingInProgress")
+                                        {
+                                            <div class="small text-muted mt-2">
+                                                The case is in official processing. To stop it, contact your case officer in the Transfer Service.
+                                            </div>
+                                        }
+                                        else if (transferRequest.Status is TransferRequestStatus.Sent
                                                  or TransferRequestStatus.Accepted
                                                  or TransferRequestStatus.InProgress)
                                         {
@@ -518,6 +530,14 @@
                                         {
                                             <div class="small text-success mt-2">
                                                 The rental is active.
+                                            </div>
+                                        }
+
+                                        @if (rentalAgreement.Status ==
+                                             RentalAgreementStatus.Completed)
+                                        {
+                                            <div class="small text-muted mt-2">
+                                                The rental has ended.
                                             </div>
                                         }
                                     }

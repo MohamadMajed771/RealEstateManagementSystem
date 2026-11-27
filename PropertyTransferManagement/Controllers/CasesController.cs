@@ -166,7 +166,7 @@ namespace PropertyTransferManagement.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [RequestSizeLimit(DocumentStorage.MaxBytes + 1024 * 1024)]
-        public async Task<IActionResult> Upload(Guid caseId, int requirementId, IFormFile? file)
+        public async Task<IActionResult> Upload(Guid caseId, int requirementId, IFormFile? file, string? confirmedDetails, bool detailsChecked = false)
         {
             var userId = _userManager.GetUserId(User)!;
 
@@ -225,7 +225,11 @@ namespace PropertyTransferManagement.Controllers
                 Sha256Hash = stored.Sha256,
                 Status = CaseDocumentStatus.PendingReview,
                 Version = previous.Count + 1,
-                UploadedAt = now
+                UploadedAt = now,
+                // Saved only when the uploader ticked "I checked these details" (spec §24).
+                UploaderConfirmedDetails = !detailsChecked || string.IsNullOrWhiteSpace(confirmedDetails)
+                    ? null
+                    : (confirmedDetails.Trim().Length > 2000 ? confirmedDetails.Trim()[..2000] : confirmedDetails.Trim())
             };
 
             _db.CaseDocuments.Add(document);

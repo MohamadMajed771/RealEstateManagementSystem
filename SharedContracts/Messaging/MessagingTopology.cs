@@ -29,6 +29,7 @@ namespace SharedContracts.Messaging
             public const string AdditionalDocumentsRequired = "transfer.case.documents-required";
             public const string TransferCompleted = "transfer.case.completed";
             public const string TransferRejected = "transfer.case.rejected";
+            public const string TransferCancellationRefused = "transfer.case.cancellation-refused";
         }
 
         /// <summary>
@@ -43,6 +44,7 @@ namespace SharedContracts.Messaging
             AdditionalDocumentsRequired => RoutingKeys.AdditionalDocumentsRequired,
             TransferCompleted => RoutingKeys.TransferCompleted,
             TransferRejected => RoutingKeys.TransferRejected,
+            TransferCancellationRefused => RoutingKeys.TransferCancellationRefused,
             _ => throw new ArgumentOutOfRangeException(
                 nameof(message), message.GetType().Name, "Unknown event type.")
         };

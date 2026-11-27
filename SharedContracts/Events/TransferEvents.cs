@@ -153,6 +153,19 @@ namespace SharedContracts.Events
         public string Reason { get; init; } = string.Empty;
     }
 
+    /// <summary>
+    /// The Transfer Service could not cancel the case because it is already
+    /// in official processing or finished. The Marketplace keeps the transfer.
+    /// </summary>
+    public record TransferCancellationRefused : TransferEvent
+    {
+        public string CaseNumber { get; init; } = string.Empty;
+
+        public string CurrentStatus { get; init; } = string.Empty;
+
+        public string Reason { get; init; } = string.Empty;
+    }
+
     public static class TransferStatusText
     {
         /// <summary>

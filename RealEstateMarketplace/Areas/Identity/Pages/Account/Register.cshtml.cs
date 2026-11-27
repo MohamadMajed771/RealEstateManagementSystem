@@ -79,18 +79,42 @@ namespace RealEstateMarketplace.Areas.Identity.Pages.Account
                 return Page();
             }
 
-            var user = new ApplicationUser
+            IdentityResult result;
+            var user = await _userManager.FindByEmailAsync(Input.Email.Trim());
+            if (user != null && !user.EmailConfirmed)
             {
-                UserName = Input.Email.Trim(),
-                Email = Input.Email.Trim(),
-                FirstName = Input.FirstName.Trim(),
-                LastName = Input.LastName.Trim(),
-                CreatedAt = DateTime.UtcNow,
-                IsActive = true
-            };
-
-            var result = await _userManager.CreateAsync(
-                user, Input.Password);
+                // Nobody has proven they own this email yet, so a new sign-up takes
+                // the account over (the code still only goes to the real inbox).
+                // This stops a stranger from blocking an email by registering it first.
+                // The security stamp is kept, so a code already sent to this inbox
+                // (codes are limited to one a minute) still works.
+                user.FirstName = Input.FirstName.Trim();
+                user.LastName = Input.LastName.Trim();
+                result = IdentityResult.Success;
+                foreach (var validator in _userManager.PasswordValidators)
+                {
+                    result = await validator.ValidateAsync(_userManager, user, Input.Password);
+                    if (!result.Succeeded) break;
+                }
+                if (result.Succeeded)
+                {
+                    user.PasswordHash = _userManager.PasswordHasher.HashPassword(user, Input.Password);
+                    result = await _userManager.UpdateAsync(user);
+                }
+            }
+            else
+            {
+                user = new ApplicationUser
+                {
+                    UserName = Input.Email.Trim(),
+                    Email = Input.Email.Trim(),
+                    FirstName = Input.FirstName.Trim(),
+                    LastName = Input.LastName.Trim(),
+                    CreatedAt = DateTime.UtcNow,
+                    IsActive = true
+                };
+                result = await _userManager.CreateAsync(user, Input.Password);
+            }
 
             if (result.Succeeded)
             {

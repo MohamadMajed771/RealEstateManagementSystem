@@ -36,6 +36,10 @@ say "Starting SQL Server and RabbitMQ..."
 docker compose up -d
 
 say "Waiting for SQL Server to accept connections..."
+# docker compose reads MSSQL_SA_PASSWORD from .env too, so read it the same way
+if [ -z "${MSSQL_SA_PASSWORD:-}" ] && [ -f .env ]; then
+  MSSQL_SA_PASSWORD="$(grep -E '^MSSQL_SA_PASSWORD=' .env | tail -n 1 | cut -d= -f2- | tr -d "\"'" || true)"
+fi
 SA_PASSWORD="${MSSQL_SA_PASSWORD:-RealEstate_Dev_2026!}"
 ready=0
 for _ in $(seq 1 60); do
@@ -53,8 +57,14 @@ say "Building..."
 dotnet build AdvancedProgrammingProject.slnx -nologo -v q
 
 # 5. Run both websites; their output is shown with a [Marketplace] / [Transfer] prefix
-trap 'echo; say "Stopping both websites..."; kill 0 2>/dev/null; exit 0' INT TERM
-trap 'kill 0 2>/dev/null' EXIT
+# Stop only what this script started (never the terminal or a parent script)
+stop_children() {
+  local runs; runs="$(pgrep -P $$ -f "dotnet run" || true)"
+  for r in $runs; do pkill -TERM -P "$r" 2>/dev/null || true; done   # the two websites
+  [ -n "$runs" ] && kill -TERM $runs 2>/dev/null || true             # dotnet run (the output filters end by themselves)
+}
+trap 'echo; say "Stopping both websites..."; stop_children; wait 2>/dev/null || true; exit 0' INT TERM
+trap 'stop_children' EXIT
 
 prefix() { awk -v p="$1" '{ print p " " $0; fflush() }'; }
 
@@ -64,7 +74,12 @@ dotnet run --no-build --project PropertyTransferManagement --launch-profile http
 
 # 6. Open the browser once both are listening
 (
-  for _ in $(seq 1 120); do
+  seen=0
+  for i in $(seq 1 120); do
+    # Give up once the websites stopped (checked only after they were seen
+    # or after a few seconds, so a slow start is not mistaken for a stop)
+    if pgrep -P $$ -f "dotnet run" >/dev/null; then seen=1
+    elif [ "$seen" = 1 ] || [ "$i" -gt 5 ]; then exit 0; fi
     if nc -z localhost 7287 >/dev/null 2>&1 && nc -z localhost 7041 >/dev/null 2>&1; then
       printf '\n\033[1;32m==> Ready!\n    Marketplace:       https://localhost:7287\n    Transfer Service:  https://localhost:7041\n    RabbitMQ:          http://localhost:15672 (guest / guest)\n    Email codes appear below in this terminal (search: DEV EMAIL).\n    Press Ctrl+C to stop.\033[0m\n\n'
       [ -z "${NO_OPEN:-}" ] && command -v open >/dev/null && { open https://localhost:7287; open https://localhost:7041; }

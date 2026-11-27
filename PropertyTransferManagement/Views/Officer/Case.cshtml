@@ -55,6 +55,14 @@
                                 · <strong>@current.Status</strong>
                             </div>
 
+                            @if (!string.IsNullOrWhiteSpace(current.UploaderConfirmedDetails))
+                            {
+                                <div class="small border rounded bg-light p-2 mt-1" style="white-space:pre-line">
+                                    <div class="text-muted mb-1">Details confirmed by the uploader (OCR-assisted, <b>not verified</b> — compare with the document):</div>
+                                    @current.UploaderConfirmedDetails
+                                </div>
+                            }
+
                             @foreach (var review in current.Reviews.OrderBy(rv => rv.ReviewedAt))
                             {
                                 <div class="small text-muted">Review: @review.Decision @(review.Comments == null ? "" : $"— {review.Comments}")</div>

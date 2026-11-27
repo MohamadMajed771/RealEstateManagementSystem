@@ -47,6 +47,7 @@ builder.Services.AddRateLimiter(options =>
 builder.Services.AddScoped<RealEstateMarketplace.Services.Identity.EmailVerificationService>();
 builder.Services.AddSingleton<RealEstateMarketplace.Services.Payments.DummyPaymentGateway>();
 builder.Services.AddHostedService<RealEstateMarketplace.Services.Payments.PromotionExpiryService>();
+builder.Services.AddHostedService<RealEstateMarketplace.Services.RentalStatusService>();
 
 // ==========================================
 // RABBITMQ (System 1 <-> System 2)

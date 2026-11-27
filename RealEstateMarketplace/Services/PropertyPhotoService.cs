@@ -8,19 +8,24 @@ namespace RealEstateMarketplace.Services
     {
         private const long MaxFileSize = 5 * 1024 * 1024;
 
+        private readonly string _uploadRoot;
         private readonly string _uploadDirectory;
 
         public PropertyPhotoService(IWebHostEnvironment environment)
         {
-            _uploadDirectory = Path.Combine(
-                environment.WebRootPath,
-                "uploads",
-                "properties");
+            _uploadRoot = Path.Combine(environment.WebRootPath, "uploads");
+            _uploadDirectory = Path.Combine(_uploadRoot, "properties");
 
             Directory.CreateDirectory(_uploadDirectory);
         }
 
-        public async Task<string> UploadPhotoAsync(IFormFile file)
+        /// <summary>Profile pictures use the same checks, in uploads/profiles.</summary>
+        public Task<string> UploadProfilePictureAsync(IFormFile file) => UploadPhotoAsync(file, "profiles");
+
+        public Task DeleteProfilePictureAsync(string? imagePath) =>
+            DeleteFromAsync(Path.Combine(_uploadRoot, "profiles"), imagePath);
+
+        public async Task<string> UploadPhotoAsync(IFormFile file, string folder = "properties")
         {
             if (file == null || file.Length == 0)
                 throw new ArgumentException("Please select a photo.");
@@ -63,8 +68,11 @@ namespace RealEstateMarketplace.Services
                         "The selected file is not a valid image format.");
             }
 
+            var directory = Path.Combine(_uploadRoot, folder);
+            Directory.CreateDirectory(directory);
+
             var fileName = $"{Guid.NewGuid():N}{extension}";
-            var fullPath = Path.Combine(_uploadDirectory, fileName);
+            var fullPath = Path.Combine(directory, fileName);
 
             await using (var output = new FileStream(
                 fullPath, FileMode.CreateNew))
@@ -72,10 +80,12 @@ namespace RealEstateMarketplace.Services
                 await file.CopyToAsync(output);
             }
 
-            return $"/uploads/properties/{fileName}";
+            return $"/uploads/{folder}/{fileName}";
         }
 
-        public Task DeletePhotoAsync(string imagePath)
+        public Task DeletePhotoAsync(string imagePath) => DeleteFromAsync(_uploadDirectory, imagePath);
+
+        private static Task DeleteFromAsync(string directory, string? imagePath)
         {
             if (string.IsNullOrWhiteSpace(imagePath))
                 return Task.CompletedTask;
@@ -85,7 +95,7 @@ namespace RealEstateMarketplace.Services
             if (string.IsNullOrWhiteSpace(fileName))
                 return Task.CompletedTask;
 
-            var fullPath = Path.Combine(_uploadDirectory, fileName);
+            var fullPath = Path.Combine(directory, fileName);
 
             if (File.Exists(fullPath))
                 File.Delete(fullPath);

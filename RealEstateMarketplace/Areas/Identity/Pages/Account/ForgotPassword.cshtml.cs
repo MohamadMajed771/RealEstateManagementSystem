@@ -46,6 +46,8 @@ public class ForgotPasswordModel : PageModel
         if (user != null && await _userManager.IsEmailConfirmedAsync(user))
             await _codes.SendResetCodeAsync(user);
 
-        return RedirectToPage("./ResetPassword", new { email = Input.Email });
+        // Kept server-side (TempData cookie), not in the address bar or logs.
+        TempData["ResetEmail"] = Input.Email;
+        return RedirectToPage("./ResetPassword");
     }
 }

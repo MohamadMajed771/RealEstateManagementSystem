@@ -540,6 +540,10 @@ namespace PropertyTransferManagement.Data.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<string>("UploaderConfirmedDetails")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
                     b.Property<int>("Version")
                         .HasColumnType("int");
 

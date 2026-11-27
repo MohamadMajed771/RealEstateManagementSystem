@@ -444,6 +444,14 @@
                     The property is currently rented.
                 </div>
             }
+            else if (Model.Status == RentalAgreementStatus.Completed)
+            {
+                <hr />
+
+                <div class="alert alert-secondary mb-0">
+                    The rental has ended.
+                </div>
+            }
             else if (Model.Status == RentalAgreementStatus.Rejected)
             {
                 <hr />

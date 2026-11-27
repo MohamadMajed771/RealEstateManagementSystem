@@ -51,9 +51,9 @@ public class ResetPasswordModel : PageModel
         public string? ConfirmPassword { get; set; }
     }
 
-    public void OnGet(string? email, bool resent = false)
+    public void OnGet(bool resent = false)
     {
-        Input.Email = email ?? string.Empty;
+        Input.Email = TempData["ResetEmail"] as string ?? string.Empty;
         Message = resent
             ? "If the account exists, a new code was sent (at most one per minute)."
             : "If an account exists for this email, we sent it a 6-digit code.";
@@ -97,6 +97,7 @@ public class ResetPasswordModel : PageModel
         if (user != null && await _userManager.IsEmailConfirmedAsync(user))
             await _codes.SendResetCodeAsync(user);
 
-        return RedirectToPage(new { email = Input.Email, resent = true });
+        TempData["ResetEmail"] = Input.Email;
+        return RedirectToPage(new { resent = true });
     }
 }

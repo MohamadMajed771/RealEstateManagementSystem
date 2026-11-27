@@ -310,8 +310,8 @@ namespace RealEstateMarketplace.Controllers
         // CANCEL OWNERSHIP TRANSFER (BUYER OR SELLER)
         // ==========================================
         //
-        // Sends TransferCancelled to System 2 (through the outbox),
-        // which cancels the case. The sale goes back to "Confirmed".
+        // Sends TransferCancelled to System 2 (through the outbox). When System 2
+        // confirms, the sale goes back to "Confirmed" (see TransferUpdatesConsumer).
 
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -363,13 +363,11 @@ namespace RealEstateMarketplace.Controllers
             var now = DateTime.UtcNow;
             var who = transaction.BuyerId == userId ? "buyer" : "seller";
 
-            request.Status = TransferRequestStatus.Cancelled;
-            request.ExternalStatus = "Cancelled";
-            request.ExternalStatusUpdatedAt = now;
+            // The Transfer Service decides: it confirms (TransferStatusChanged "Cancelled")
+            // or refuses (TransferCancellationRefused) when official processing has started.
+            // Until then the request waits, so both systems always agree.
+            request.Status = TransferRequestStatus.CancellationRequested;
             request.UpdatedAt = now;
-
-            transaction.Status = TransactionStatus.Confirmed;
-            transaction.UpdatedAt = now;
 
             Outbox.Add(_context, new TransferCancelled
             {
@@ -377,22 +375,9 @@ namespace RealEstateMarketplace.Controllers
                 Reason = $"Cancelled by the {who}: {reason}"
             });
 
-            _context.Notifications.Add(new Notification
-            {
-                UserId = who == "buyer" ? transaction.SellerId : transaction.BuyerId,
-                Title = "Ownership transfer cancelled",
-                Message = $"The {who} cancelled the ownership-transfer request for " +
-                          $"'{transaction.PropertyListing.Title}'. Reason: {reason}",
-                Type = NotificationType.TransferStatusChanged,
-                RelatedEntityId = transaction.Id,
-                RelatedEntityType = "Transaction",
-                ActionUrl = "/Transactions/MyTransactions",
-                CreatedAt = now
-            });
-
             await _context.SaveChangesAsync();
 
-            TempData["Success"] = "The ownership-transfer request was cancelled.";
+            TempData["Success"] = "Cancellation sent to the Transfer Service. You will be notified when it is confirmed.";
             return RedirectToAction(nameof(MyTransactions));
         }
 

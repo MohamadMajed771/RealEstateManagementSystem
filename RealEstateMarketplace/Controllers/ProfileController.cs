@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using RealEstateMarketplace.Models;
+using RealEstateMarketplace.Services;
 using RealEstateMarketplace.ViewModels;
 
 namespace RealEstateMarketplace.Controllers
@@ -11,11 +12,76 @@ namespace RealEstateMarketplace.Controllers
     public class ProfileController : Controller
     {
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly PropertyPhotoService _photos;
 
         public ProfileController(
-            UserManager<ApplicationUser> userManager)
+            UserManager<ApplicationUser> userManager,
+            PropertyPhotoService photos)
         {
             _userManager = userManager;
+            _photos = photos;
+        }
+
+        // POST: /Profile/UploadPicture
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [RequestSizeLimit(6 * 1024 * 1024)]
+        public async Task<IActionResult> UploadPicture(IFormFile? picture)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null) return Challenge();
+
+            if (picture == null)
+            {
+                TempData["ErrorMessage"] = "Please choose a picture.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            string path;
+            try
+            {
+                path = await _photos.UploadProfilePictureAsync(picture);
+            }
+            catch (ArgumentException ex)
+            {
+                TempData["ErrorMessage"] = ex.Message;
+                return RedirectToAction(nameof(Index));
+            }
+
+            var old = user.ProfilePicturePath;
+            user.ProfilePicturePath = path;
+            if (!(await _userManager.UpdateAsync(user)).Succeeded)
+            {
+                // Keep the old picture; throw away the new file.
+                await _photos.DeleteProfilePictureAsync(path);
+                TempData["ErrorMessage"] = "Your picture could not be saved. Please try again.";
+                return RedirectToAction(nameof(Index));
+            }
+            await _photos.DeleteProfilePictureAsync(old);
+
+            TempData["SuccessMessage"] = "Your profile picture was updated.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        // POST: /Profile/RemovePicture
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RemovePicture()
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null) return Challenge();
+
+            var old = user.ProfilePicturePath;
+            user.ProfilePicturePath = null;
+            if (!(await _userManager.UpdateAsync(user)).Succeeded)
+            {
+                TempData["ErrorMessage"] = "Your picture could not be removed. Please try again.";
+                return RedirectToAction(nameof(Index));
+            }
+            await _photos.DeleteProfilePictureAsync(old);
+
+            TempData["SuccessMessage"] = "Your profile picture was removed.";
+            return RedirectToAction(nameof(Index));
         }
 
         // GET: /Profile

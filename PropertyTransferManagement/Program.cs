@@ -43,7 +43,7 @@ builder.Services.AddDefaultIdentity<ApplicationUser>(options =>
 .AddEntityFrameworkStores<ApplicationDbContext>();
 
 // Real SMTP when SmtpSettings are configured, otherwise
-// emails (verification links) are printed to the console.
+// emails (verification codes) are printed to the console.
 if (!string.IsNullOrWhiteSpace(builder.Configuration["SmtpSettings:Host"]))
 {
     builder.Services.AddTransient<IEmailSender, SmtpEmailSender>();
@@ -57,6 +57,8 @@ else
 // APPLICATION SERVICES
 // ==========================================
 
+builder.Services.AddMemoryCache();
+builder.Services.AddScoped<PropertyTransferManagement.Services.Identity.EmailVerificationService>();
 builder.Services.AddScoped<CaseService>();
 builder.Services.AddScoped<CaseChatService>();
 builder.Services.AddScoped<CaseAccess>();

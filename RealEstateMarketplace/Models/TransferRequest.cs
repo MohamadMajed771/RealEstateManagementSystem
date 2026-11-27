@@ -53,6 +53,9 @@ namespace RealEstateMarketplace.Models
         InProgress = 4,
         Completed = 5,
         Rejected = 6,
-        Cancelled = 7
+        Cancelled = 7,
+
+        // The buyer or seller asked to cancel; waiting for the Transfer Service to confirm.
+        CancellationRequested = 8
     }
 }

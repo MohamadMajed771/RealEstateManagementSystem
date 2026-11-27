@@ -57,12 +57,28 @@
                              r.Status != DocumentRequirementStatus.Waived)
                         {
                             <form asp-action="Upload" method="post" enctype="multipart/form-data"
-                                  class="row g-2 align-items-center mt-2">
+                                  class="row g-2 align-items-center mt-2 doc-upload-form">
                                 <input type="hidden" name="caseId" value="@c.Id" />
                                 <input type="hidden" name="requirementId" value="@r.Id" />
                                 <div class="col-sm-8">
-                                    <input type="file" name="file" class="form-control form-control-sm"
+                                    <input type="file" name="file" class="form-control form-control-sm doc-file"
                                            accept=".pdf,.jpg,.jpeg,.png" required />
+                                </div>
+                                <div class="col-12 doc-ocr d-none">
+                                    <div class="small text-muted mb-1 doc-ocr-status"></div>
+                                    <label class="form-label small mb-1">
+                                        Details read from the image (OCR) — check and correct them before uploading.
+                                        They help the officer but are not legally verified.
+                                    </label>
+                                    <textarea name="confirmedDetails" rows="4" maxlength="2000"
+                                              class="form-control form-control-sm doc-ocr-text"></textarea>
+                                    <div class="form-check mt-1">
+                                        <input type="checkbox" name="detailsChecked" value="true" id="ocr-check-@r.Id"
+                                               class="form-check-input doc-ocr-check" />
+                                        <label class="form-check-label small" for="ocr-check-@r.Id">
+                                            I checked these details and they match the document.
+                                        </label>
+                                    </div>
                                 </div>
                                 <div class="col-sm-4">
                                     <button type="submit" class="btn btn-sm btn-primary w-100">
@@ -156,4 +172,7 @@
 
 @section Scripts {
     <script src="~/js/case-chat.js" asp-append-version="true"></script>
+    <!-- Free OCR that runs in the browser: the document never leaves the computer for OCR. -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <script src="~/js/document-ocr.js" asp-append-version="true"></script>
 }

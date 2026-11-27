@@ -55,6 +55,12 @@ namespace PropertyTransferManagement.Models
 
         public int Version { get; set; } = 1;
 
+        // Details read from an image with OCR (in the uploader's browser) and
+        // checked/corrected by the uploader. Not legally verified (spec §24):
+        // the officer still compares them with the document itself.
+        [StringLength(2000)]
+        public string? UploaderConfirmedDetails { get; set; }
+
         public DateTime UploadedAt { get; set; } = DateTime.UtcNow;
 
         public bool IsDeleted { get; set; } = false;

@@ -68,6 +68,12 @@ namespace PropertyTransferManagement.Services.Messaging
             if (await db.TransferCases.AnyAsync(c => c.MarketplaceTransferRequestId == request.TransferRequestId, ct))
                 return;
 
+            // The Marketplace already cancelled this request (the cancel overtook a
+            // retried request message): do not open a case for it.
+            if (await db.InboxMessages.AnyAsync(m => m.CorrelationId == request.TransferRequestId &&
+                                                     m.EventType == nameof(TransferCancelled), ct))
+                return;
+
             var caseService = services.GetRequiredService<CaseService>();
             var config = services.GetRequiredService<IConfiguration>();
             var now = DateTime.UtcNow;
@@ -220,14 +226,68 @@ namespace PropertyTransferManagement.Services.Messaging
             var transferCase = await db.TransferCases
                 .FirstOrDefaultAsync(c => c.MarketplaceTransferRequestId == cancelled.TransferRequestId);
 
-            if (transferCase == null || CaseWorkflow.IsFinished(transferCase.Status))
+            // No case yet (the request was not processed, or is still being retried).
+            // The inbox row saved for this message stops a case being opened later.
+            if (transferCase == null)
+            {
+                Outbox.Add(db, new TransferStatusChanged
+                {
+                    TransferRequestId = cancelled.TransferRequestId,
+                    PreviousStatus = "",
+                    NewStatus = nameof(TransferCaseStatus.Cancelled),
+                    Note = "Cancelled before a case was opened."
+                });
                 return;
+            }
+
+            if (transferCase.Status == TransferCaseStatus.Cancelled)
+            {
+                // Already cancelled (e.g. by the officer): confirm it again.
+                Outbox.Add(db, new TransferStatusChanged
+                {
+                    TransferRequestId = transferCase.MarketplaceTransferRequestId,
+                    CaseNumber = transferCase.CaseNumber,
+                    PreviousStatus = transferCase.Status.ToString(),
+                    NewStatus = transferCase.Status.ToString(),
+                    Note = "The case was already cancelled."
+                });
+                return;
+            }
 
             var caseService = services.GetRequiredService<CaseService>();
+
+            // Official processing started, or the case is finished: only the
+            // officer can stop it. Tell the Marketplace so both systems agree.
+            if (CaseWorkflow.IsFinished(transferCase.Status) ||
+                transferCase.Status is TransferCaseStatus.ReadyForProcessing or TransferCaseStatus.ExternalProcessingInProgress)
+            {
+                var reason = CaseWorkflow.IsFinished(transferCase.Status)
+                    ? "The case is already finished."
+                    : "The case is already in official processing. Contact your case officer to stop it.";
+
+                Outbox.Add(db, new TransferCancellationRefused
+                {
+                    TransferRequestId = transferCase.MarketplaceTransferRequestId,
+                    CaseNumber = transferCase.CaseNumber,
+                    CurrentStatus = transferCase.Status.ToString(),
+                    Reason = reason
+                });
+
+                caseService.Audit(transferCase.Id, null, "CancellationRefused", "TransferCase",
+                    transferCase.Id.ToString(), $"Marketplace cancellation refused: {reason} ({cancelled.Reason})");
+
+                if (transferCase.AssignedOfficerId != null)
+                    caseService.Notify(transferCase.AssignedOfficerId, transferCase.Id,
+                        $"Cancellation request refused — {transferCase.CaseNumber}",
+                        $"A party asked to cancel from the Marketplace, but the case is {CaseWorkflow.Display(transferCase.Status)}. {cancelled.Reason}",
+                        CaseNotificationType.SystemAnnouncement);
+                return;
+            }
+
+            // Publishes TransferStatusChanged(Cancelled) so the Marketplace confirms it.
             await caseService.ChangeStatusAsync(
                 transferCase, TransferCaseStatus.Cancelled, null,
-                $"Cancelled from the Marketplace. {cancelled.Reason}".Trim(),
-                publishStatusChanged: false);
+                $"Cancelled from the Marketplace. {cancelled.Reason}".Trim());
         }
 
         private static string Limit(string value, int max) =>

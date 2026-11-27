@@ -83,15 +83,23 @@ namespace RealEstateMarketplace.Services.Identity
             return true;
         }
 
+        private const int MaxResetFailures = 5;
+        private static readonly TimeSpan ResetFailureWindow = TimeSpan.FromMinutes(15);
+
         /// <summary>
-        /// Checks the reset code and sets the new password. Wrong codes count
-        /// as failed attempts (lockout). Changing the password also changes the
-        /// security stamp, so the same code cannot be used twice.
+        /// Checks the reset code and sets the new password. Wrong codes are
+        /// counted separately from login failures (5 per 15 minutes), so someone
+        /// who only knows the email cannot lock the owner out of logging in.
+        /// Changing the password also changes the security stamp, so the same
+        /// code cannot be used twice.
         /// </summary>
         public async Task<(VerifyResult Result, IEnumerable<IdentityError> Errors)> ResetPasswordAsync(
             ApplicationUser user, string code, string newPassword)
         {
-            if (await _userManager.IsLockedOutAsync(user)) return (VerifyResult.LockedOut, Array.Empty<IdentityError>());
+            var failKey = "reset-code-failures:" + user.Id;
+            var failures = _cache.TryGetValue(failKey, out int f) ? f : 0;
+            if (failures >= MaxResetFailures || await _userManager.IsLockedOutAsync(user))
+                return (VerifyResult.LockedOut, Array.Empty<IdentityError>());
 
             code = new string((code ?? "").Where(char.IsDigit).ToArray());
             bool ok = code.Length == 6 &&
@@ -99,15 +107,16 @@ namespace RealEstateMarketplace.Services.Identity
 
             if (!ok)
             {
-                await _userManager.AccessFailedAsync(user);
-                var locked = await _userManager.IsLockedOutAsync(user);
-                return (locked ? VerifyResult.LockedOut : VerifyResult.WrongCode, Array.Empty<IdentityError>());
+                failures++;
+                _cache.Set(failKey, failures, ResetFailureWindow);
+                return (failures >= MaxResetFailures ? VerifyResult.LockedOut : VerifyResult.WrongCode, Array.Empty<IdentityError>());
             }
 
             var token = await _userManager.GeneratePasswordResetTokenAsync(user);
             var result = await _userManager.ResetPasswordAsync(user, token, newPassword);
             if (!result.Succeeded) return (VerifyResult.WrongCode, result.Errors);
 
+            _cache.Remove(failKey);
             await _userManager.ResetAccessFailedCountAsync(user);
             return (VerifyResult.Verified, Array.Empty<IdentityError>());
         }
