@@ -142,6 +142,25 @@
                             My Favorites
                         </a>
 
+                        <!-- Saved searches, conversations, notifications (spec §4) -->
+                        <a asp-controller="SavedSearches"
+                           asp-action="Index"
+                           class="btn btn-outline-info">
+                            Saved Searches
+                        </a>
+
+                        <a asp-controller="Chat"
+                           asp-action="Index"
+                           class="btn btn-outline-primary">
+                            My Conversations
+                        </a>
+
+                        <a asp-controller="Notifications"
+                           asp-action="Index"
+                           class="btn btn-outline-secondary">
+                            Notifications
+                        </a>
+
                         <!-- My Requests -->
                         <a asp-controller="PropertyInquiries"
                            asp-action="MyRequests"

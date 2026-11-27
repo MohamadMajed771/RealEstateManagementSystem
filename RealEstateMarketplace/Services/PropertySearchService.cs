@@ -32,6 +32,10 @@ namespace RealEstateMarketplace.Services
         // listing text actually mentions them. Never invents data.
         public List<string> Keywords { get; set; } = new();
 
+        // Saved-search matching checks a single listing with the same rules.
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+        public int? OnlyListingId { get; set; }
+
         public bool HasDistanceFilter =>
             Lat is >= -90 and <= 90 && Lng is >= -180 and <= 180 && RadiusKm is > 0 and <= 500;
     }
@@ -54,6 +58,8 @@ namespace RealEstateMarketplace.Services
                 .AsNoTracking()
                 .Where(l => l.Status == ListingStatus.Approved && !l.IsDeleted);
 
+            if (c.OnlyListingId.HasValue)
+                query = query.Where(l => l.Id == c.OnlyListingId.Value);
             if (c.ListingType.HasValue)
                 query = query.Where(l => l.ListingType == c.ListingType.Value);
 

@@ -65,6 +65,7 @@ builder.Services.AddScoped<CaseAccess>();
 builder.Services.AddScoped<CaseEmailer>();
 builder.Services.AddSingleton<PropertyTransferManagement.Services.Payments.DummyPaymentGateway>();
 builder.Services.AddHostedService<AppointmentReminderService>();
+builder.Services.AddHostedService<DocumentReminderService>();
 
 // SignalR: case chat + live notifications
 builder.Services.AddSignalR();
@@ -94,6 +95,11 @@ builder.Services.AddHostedService<TransferRequestsConsumer>();
 
 // Publishes TransferCaseCreated, TransferStatusChanged, ...
 builder.Services.AddHostedService<OutboxPublisherService>();
+
+// Health checks (spec §40): GET /health shows whether the database and RabbitMQ are reachable.
+builder.Services.AddHealthChecks()
+    .AddDbContextCheck<PropertyTransferManagement.Data.ApplicationDbContext>("database")
+    .AddCheck<SharedContracts.Messaging.RabbitMqHealthCheck>("rabbitmq");
 
 var app = builder.Build();
 
@@ -129,5 +135,10 @@ app.MapRazorPages()
 
 app.MapHub<PropertyTransferManagement.Hubs.CaseChatHub>("/hubs/case-chat");
 app.MapHub<PropertyTransferManagement.Hubs.NotificationHub>("/hubs/notifications");
+
+app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    ResponseWriter = SharedContracts.Messaging.HealthResponse.WriteAsync
+});
 
 app.Run();

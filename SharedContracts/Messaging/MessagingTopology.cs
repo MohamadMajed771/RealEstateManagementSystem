@@ -22,6 +22,7 @@ namespace SharedContracts.Messaging
             // System 1 -> System 2
             public const string TransferRequested = "marketplace.transfer.requested";
             public const string TransferCancelled = "marketplace.transfer.cancelled";
+            public const string TransferInformationUpdated = "marketplace.transfer.information-updated";
 
             // System 2 -> System 1
             public const string TransferCaseCreated = "transfer.case.created";
@@ -39,6 +40,7 @@ namespace SharedContracts.Messaging
         {
             TransferRequested => RoutingKeys.TransferRequested,
             TransferCancelled => RoutingKeys.TransferCancelled,
+            TransferInformationUpdated => RoutingKeys.TransferInformationUpdated,
             TransferCaseCreated => RoutingKeys.TransferCaseCreated,
             TransferStatusChanged => RoutingKeys.TransferStatusChanged,
             AdditionalDocumentsRequired => RoutingKeys.AdditionalDocumentsRequired,

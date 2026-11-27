@@ -141,8 +141,125 @@ namespace PropertyTransferManagement.Controllers
         // GET: /Admin/Officers
         public async Task<IActionResult> Officers()
         {
-            return View(await OfficerOptionsAsync());
+            var officers = await _userManager.GetUsersInRoleAsync(DataSeeder.OfficerRole);
+            var admins = await _userManager.GetUsersInRoleAsync(DataSeeder.AdminRole);
+            var load = await ActiveCaseCountsAsync();
+
+            var staff = officers.Concat(admins)
+                .DistinctBy(u => u.Id)
+                .Select(u => new StaffMember
+                {
+                    Id = u.Id,
+                    Name = $"{u.FirstName} {u.LastName}",
+                    Email = u.Email ?? "",
+                    IsActive = u.IsActive,
+                    IsOfficer = officers.Any(o => o.Id == u.Id),
+                    IsAdmin = admins.Any(a => a.Id == u.Id),
+                    ActiveCases = load.GetValueOrDefault(u.Id)
+                })
+                .OrderBy(s => s.Name)
+                .ToList();
+
+            return View(staff);
         }
+
+        // POST: /Admin/SetActive  (deactivate / reactivate a staff account)
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SetActive(string userId, bool active)
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null) return NotFound();
+
+            if (!active)
+            {
+                if (user.Id == _userManager.GetUserId(User))
+                    return Refuse("You cannot deactivate your own account.");
+                var cases = (await ActiveCaseCountsAsync()).GetValueOrDefault(user.Id);
+                if (cases > 0)
+                    return Refuse($"{user.FirstName} {user.LastName} still has {cases} active case(s). Reassign them first.");
+                if (await IsLastActiveAdminAsync(user))
+                    return Refuse("There must always be at least one active administrator.");
+            }
+
+            user.IsActive = active;
+            await _userManager.UpdateAsync(user);
+            // A new security stamp signs a deactivated user out within a minute.
+            if (!active) await _userManager.UpdateSecurityStampAsync(user);
+
+            _cases.Audit(null, _userManager.GetUserId(User), active ? "AccountReactivated" : "AccountDeactivated",
+                "ApplicationUser", user.Id, $"{user.Email} {(active ? "reactivated" : "deactivated")}.");
+            await _db.SaveChangesAsync();
+
+            TempData["Success"] = $"{user.FirstName} {user.LastName} was {(active ? "reactivated" : "deactivated")}.";
+            return RedirectToAction(nameof(Officers));
+        }
+
+        // POST: /Admin/ChangeRole  (give or take the Officer / Admin role)
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ChangeRole(string email, string role, bool grant)
+        {
+            if (role != DataSeeder.OfficerRole && role != DataSeeder.AdminRole) return BadRequest();
+
+            var user = await _userManager.FindByEmailAsync((email ?? "").Trim());
+            if (user == null)
+                return Refuse("No account uses this email. The person must register first, or create an officer account below.");
+            if (grant && !user.EmailConfirmed)
+                return Refuse("This account has not verified its email yet.");
+
+            bool has = await _userManager.IsInRoleAsync(user, role);
+            if (grant == has)
+                return Refuse($"{user.Email} {(has ? "already has" : "does not have")} the {role} role.");
+
+            if (!grant)
+            {
+                if (role == DataSeeder.AdminRole && user.Id == _userManager.GetUserId(User))
+                    return Refuse("You cannot remove your own administrator role.");
+                if (role == DataSeeder.AdminRole && await IsLastActiveAdminAsync(user))
+                    return Refuse("There must always be at least one active administrator.");
+                var cases = (await ActiveCaseCountsAsync()).GetValueOrDefault(user.Id);
+                if (role == DataSeeder.OfficerRole && cases > 0)
+                    return Refuse($"{user.FirstName} {user.LastName} still has {cases} active case(s). Reassign them first.");
+            }
+
+            var result = grant
+                ? await _userManager.AddToRoleAsync(user, role)
+                : await _userManager.RemoveFromRoleAsync(user, role);
+            if (!result.Succeeded)
+                return Refuse(string.Join(" ", result.Errors.Select(e => e.Description)));
+            await _userManager.UpdateSecurityStampAsync(user); // new roles apply at the next request check
+
+            _cases.Audit(null, _userManager.GetUserId(User), grant ? "RoleGranted" : "RoleRemoved",
+                "ApplicationUser", user.Id, $"{role} role {(grant ? "given to" : "removed from")} {user.Email}.");
+            await _db.SaveChangesAsync();
+
+            TempData["Success"] = $"{role} role {(grant ? "given to" : "removed from")} {user.FirstName} {user.LastName}.";
+            return RedirectToAction(nameof(Officers));
+        }
+
+        private IActionResult Refuse(string message)
+        {
+            TempData["Error"] = message;
+            return RedirectToAction(nameof(Officers));
+        }
+
+        private async Task<bool> IsLastActiveAdminAsync(ApplicationUser user)
+        {
+            if (!await _userManager.IsInRoleAsync(user, DataSeeder.AdminRole)) return false;
+            var admins = await _userManager.GetUsersInRoleAsync(DataSeeder.AdminRole);
+            return admins.Count(a => a.IsActive && a.Id != user.Id) == 0;
+        }
+
+        private Task<Dictionary<string, int>> ActiveCaseCountsAsync() =>
+            _db.TransferCases
+                .Where(c => c.AssignedOfficerId != null &&
+                            c.Status != TransferCaseStatus.CaseClosed &&
+                            c.Status != TransferCaseStatus.Cancelled &&
+                            c.Status != TransferCaseStatus.Rejected)
+                .GroupBy(c => c.AssignedOfficerId!)
+                .Select(g => new { g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.Key, x => x.Count);
 
         // POST: /Admin/CreateOfficer
         [HttpPost]
@@ -188,15 +305,7 @@ namespace PropertyTransferManagement.Controllers
         private async Task<List<OfficerOption>> OfficerOptionsAsync()
         {
             var officers = await _userManager.GetUsersInRoleAsync(DataSeeder.OfficerRole);
-
-            var load = await _db.TransferCases
-                .Where(c => c.AssignedOfficerId != null &&
-                            c.Status != TransferCaseStatus.CaseClosed &&
-                            c.Status != TransferCaseStatus.Cancelled &&
-                            c.Status != TransferCaseStatus.Rejected)
-                .GroupBy(c => c.AssignedOfficerId!)
-                .Select(g => new { g.Key, Count = g.Count() })
-                .ToDictionaryAsync(x => x.Key, x => x.Count);
+            var load = await ActiveCaseCountsAsync();
 
             return officers
                 .Where(o => o.IsActive)

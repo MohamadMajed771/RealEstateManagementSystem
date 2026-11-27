@@ -138,6 +138,11 @@ builder.Services.AddScoped<PropertyPhotoService>();
 // BUILD APPLICATION
 // ==========================================
 
+// Health checks (spec §40): GET /health shows whether the database and RabbitMQ are reachable.
+builder.Services.AddHealthChecks()
+    .AddDbContextCheck<RealEstateMarketplace.Data.ApplicationDbContext>("database")
+    .AddCheck<SharedContracts.Messaging.RabbitMqHealthCheck>("rabbitmq");
+
 var app = builder.Build();
 
 // Migrations (development), Admin role and optional seeded admin
@@ -214,5 +219,10 @@ app.MapRazorPages()
 // ==========================================
 // START APPLICATION
 // ==========================================
+
+app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    ResponseWriter = SharedContracts.Messaging.HealthResponse.WriteAsync
+});
 
 app.Run();

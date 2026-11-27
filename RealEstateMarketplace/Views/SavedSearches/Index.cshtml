@@ -137,6 +137,31 @@
                                 m²
                             </div>
 
+                            @if (search.MaxSizeSquareMeters.HasValue)
+                            {
+                                <div class="mb-2"><strong>Maximum Size:</strong> @search.MaxSizeSquareMeters.Value.ToString("N0") m²</div>
+                            }
+                            @if (search.HasParking == true)
+                            {
+                                <div class="mb-2"><strong>Parking:</strong> required</div>
+                            }
+                            @if (search.Furnished.HasValue)
+                            {
+                                <div class="mb-2"><strong>Furnished:</strong> @(search.Furnished.Value ? "Yes" : "No")</div>
+                            }
+                            @if (search.RadiusKm.HasValue)
+                            {
+                                <div class="mb-2"><strong>Area:</strong> within @search.RadiusKm.Value.ToString("0.#") km of a point on the map</div>
+                            }
+
+                            <form asp-controller="SavedSearches" asp-action="ToggleEmail" asp-route-id="@search.Id"
+                                  method="post" class="mt-3">
+                                <button type="submit" class="btn btn-sm @(search.EmailNotificationsEnabled ? "btn-success" : "btn-outline-secondary")">
+                                    <i class="bi bi-envelope me-1"></i>
+                                    Email alerts: @(search.EmailNotificationsEnabled ? "on" : "off")
+                                </button>
+                            </form>
+
                         </div>
 
                         <div class="card-footer bg-white border-0 pb-3">

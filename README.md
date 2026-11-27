@@ -42,7 +42,7 @@ flowchart LR
 
     SC["SharedContracts<br/>(events, topology, consumer base)"]
 
-    OUT1 -- "TransferRequested<br/>TransferCancelled" --> Q2
+    OUT1 -- "TransferRequested, TransferCancelled,<br/>TransferInformationUpdated" --> Q2
     Q2 --> IN2
     OUT2 -- "TransferCaseCreated, TransferStatusChanged,<br/>AdditionalDocumentsRequired, TransferCompleted,<br/>TransferRejected, TransferCancellationRefused" --> Q1
     Q1 --> IN1
@@ -83,8 +83,14 @@ with a 6-digit code that appears there.
 
 RabbitMQ management UI: http://localhost:15672 (guest / guest).
 
-**Automated tests:** `dotnet test` runs the tests in `RealEstate.Tests` (rental start/end, who may
-review, and how System 1 handles transfer updates and cancellations). No database or RabbitMQ needed.
+**Automated tests:** `dotnet test` runs both test projects. No database or RabbitMQ needed.
+- `RealEstate.Tests` (System 1): rental start/end, who may review, saved-search map area, and how
+  transfer updates and cancellations are handled.
+- `PropertyTransfer.Tests` (System 2): case creation, duplicates, cancel / refused cancel, name updates,
+  and missing-document reminders.
+
+**Health checks:** https://localhost:7287/health and https://localhost:7041/health show whether each app
+can reach its database and RabbitMQ.
 
 ### Optional: AI search (free)
 AI search works without any key: a built-in reader understands common English requests.
@@ -107,7 +113,9 @@ Only the search sentence is sent. The model returns filters, and every result is
 - Listings with facilities, rental period / installments, GPS or map location, photos; admin approval (edits go back to moderation)
 - Search: filters, interactive map (Leaflet + OpenStreetMap), distance from a clicked point or "my location"
 - AI search (free OpenAI-compatible endpoint or built-in reader), rate limited
-- Favorites with a side-by-side comparison table, saved searches, live chat with owners (SignalR), live notifications
+- Favorites with a side-by-side comparison table, live chat with owners (SignalR), live notifications
+- Saved searches keep every filter, including the area on the map; a newly approved matching listing sends a notification (and an email if switched on)
+- Changing your name while a transfer is open updates the case in System 2 (`TransferInformationUpdated`)
 - Transactions, rental agreements, ownership-transfer request to System 2 and live status from RabbitMQ; buyer or seller can cancel the request (`TransferCancelled`); System 2 confirms the cancel, or refuses it once official processing has started, so both systems always agree
 - Rentals move on by date: a scheduled rental becomes active on its start date; after the end date it is completed and the listing is available again
 - Reviews only after a completed sale or a started rental
@@ -122,6 +130,10 @@ Only the search sentence is sent. The model returns filters, and every result is
 - OCR on uploaded JPG/PNG documents (Tesseract.js in the browser): the text is shown, the uploader checks and corrects it,
   and the officer sees it marked "not verified" next to the document
 - Officer assignment, status workflow, official completion record, audit log
+- Admin manages staff: create officers, give or remove the Officer / Admin role, deactivate / reactivate accounts
+  (an officer with active cases must have them reassigned first; there is always at least one active admin)
+- Officer dashboard: assigned, new, to review, waiting for users, upcoming appointments, ready for processing, completed
+- Automatic reminders (in-app + email) when mandatory documents are still missing 2 days after they were requested, then every 3 days
 - Live chat: buyer ↔ officer, seller ↔ officer (private) and a shared case thread
 - Live notifications (SignalR) and email copies of appointments, with 24-hour reminders
 - Appointments: schedule, reschedule, complete, cancel
@@ -139,12 +151,23 @@ Exchange `realestate.events` (topic, durable). Dead letters go to `realestate.ev
 |---|---|---|---|
 | `TransferRequested` | 1 → 2 | `marketplace.transfer.requested` | `transfer-service.requests` |
 | `TransferCancelled` | 1 → 2 | `marketplace.transfer.cancelled` | `transfer-service.requests` |
+| `TransferInformationUpdated` | 1 → 2 | `marketplace.transfer.information-updated` | `transfer-service.requests` |
 | `TransferCaseCreated` | 2 → 1 | `transfer.case.created` | `marketplace.transfer-updates` |
 | `TransferStatusChanged` | 2 → 1 | `transfer.case.status-changed` | `marketplace.transfer-updates` |
 | `AdditionalDocumentsRequired` | 2 → 1 | `transfer.case.documents-required` | `marketplace.transfer-updates` |
 | `TransferCompleted` | 2 → 1 | `transfer.case.completed` | `marketplace.transfer-updates` |
 | `TransferRejected` | 2 → 1 | `transfer.case.rejected` | `marketplace.transfer-updates` |
 | `TransferCancellationRefused` | 2 → 1 | `transfer.case.cancellation-refused` | `marketplace.transfer-updates` |
+
+`TransferInformationUpdated` is sent when the buyer or seller changes their name in the Marketplace while
+the transfer is open; the case shows the new name, records it in the history and tells the officer.
+
+Two messages from the proposal are not needed in this design:
+- `TransferInitiationConfirmed`: both parties confirm the deal in the Marketplace *before* the buyer can request
+  the transfer, so `TransferRequested` already means "both confirmed". The seller then confirms participation
+  inside System 2.
+- `TransactionDetailsCorrected`: the agreed price and property are locked once both parties confirm. To change
+  them, the request is cancelled (`TransferCancelled`) and a new one is sent.
 
 How the messaging stays reliable:
 - **Outbox:** the business change and its `OutboxMessages` row are saved in one transaction. A background

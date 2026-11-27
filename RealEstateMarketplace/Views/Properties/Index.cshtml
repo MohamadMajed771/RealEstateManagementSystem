@@ -694,6 +694,19 @@
                         <input type="hidden" name="minBedrooms" />
                         <input type="hidden" name="minBathrooms" />
                         <input type="hidden" name="minSize" />
+                        <input type="hidden" name="maxSize" />
+                        <input type="hidden" name="hasParking" />
+                        <input type="hidden" name="furnished" />
+                        <input type="hidden" name="lat" />
+                        <input type="hidden" name="lng" />
+                        <input type="hidden" name="radiusKm" />
+
+                        <div class="form-check mt-3">
+                            <input class="form-check-input" type="checkbox" name="emailMe" value="true" id="savedSearchEmail" />
+                            <label class="form-check-label" for="savedSearchEmail">
+                                Also email me when a new property matches
+                            </label>
+                        </div>
 
                     </div>
 
@@ -743,7 +756,13 @@
                     "maxPrice",
                     "minBedrooms",
                     "minBathrooms",
-                    "minSize"
+                    "minSize",
+                    "maxSize",
+                    "hasParking",
+                    "furnished",
+                    "lat",
+                    "lng",
+                    "radiusKm"
                 ];
 
                 filterNames.forEach(function (name) {
@@ -754,7 +773,10 @@
                         saveForm.elements.namedItem(name);
 
                     if (source && target) {
-                        target.value = source.value;
+                        // A checkbox only counts when it is ticked.
+                        target.value = source.type === "checkbox"
+                            ? (source.checked ? source.value : "")
+                            : source.value;
                     }
                 });
             });

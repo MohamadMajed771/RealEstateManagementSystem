@@ -39,6 +39,7 @@ namespace PropertyTransferManagement.Services.Messaging
             {
                 nameof(TransferRequested) => message.Read<TransferRequested>(),
                 nameof(TransferCancelled) => message.Read<TransferCancelled>(),
+                nameof(TransferInformationUpdated) => message.Read<TransferInformationUpdated>(),
                 _ => throw new InvalidOperationException($"Unknown event type '{message.EventType}'.")
             };
 
@@ -57,6 +58,8 @@ namespace PropertyTransferManagement.Services.Messaging
                 await CreateCaseAsync(services, db, requested, ct);
             else if (evt is TransferCancelled cancelled)
                 await CancelCaseAsync(services, db, cancelled);
+            else if (evt is TransferInformationUpdated updated)
+                await UpdatePartyAsync(services, db, updated, ct);
 
             await db.SaveChangesAsync(ct);
         }
@@ -288,6 +291,50 @@ namespace PropertyTransferManagement.Services.Messaging
             await caseService.ChangeStatusAsync(
                 transferCase, TransferCaseStatus.Cancelled, null,
                 $"Cancelled from the Marketplace. {cancelled.Reason}".Trim());
+        }
+
+        private static async Task UpdatePartyAsync(
+            IServiceProvider services, ApplicationDbContext db, TransferInformationUpdated updated, CancellationToken ct)
+        {
+            var transferCase = await db.TransferCases
+                .FirstOrDefaultAsync(c => c.MarketplaceTransferRequestId == updated.TransferRequestId, ct);
+
+            if (transferCase == null)
+            {
+                // Cancelled before a case was opened: nothing to update.
+                if (await db.InboxMessages.AnyAsync(m => m.CorrelationId == updated.TransferRequestId &&
+                                                         m.EventType == nameof(TransferCancelled), ct))
+                    return;
+                // The request itself is still being retried: try this message again later.
+                throw new InvalidOperationException(
+                    $"No case yet for transfer request {updated.TransferRequestId}; retrying.");
+            }
+
+            if (CaseWorkflow.IsFinished(transferCase.Status) || string.IsNullOrWhiteSpace(updated.FullName))
+                return;
+
+            var isBuyer = updated.PartyRole == "Buyer";
+            if (!isBuyer && updated.PartyRole != "Seller")
+                throw new InvalidOperationException($"Unknown party role '{updated.PartyRole}'.");
+
+            var newName = Limit(updated.FullName.Trim(), 150);
+            var oldName = isBuyer ? transferCase.BuyerFullName : transferCase.SellerFullName;
+            if (newName == oldName) return;
+
+            if (isBuyer) transferCase.BuyerFullName = newName;
+            else transferCase.SellerFullName = newName;
+            transferCase.UpdatedAt = DateTime.UtcNow;
+
+            var caseService = services.GetRequiredService<CaseService>();
+            caseService.Audit(transferCase.Id, null, "PartyDetailsUpdated", "TransferCase",
+                transferCase.Id.ToString(), $"{updated.PartyRole} name changed in the Marketplace: {oldName} → {newName}.");
+
+            if (transferCase.AssignedOfficerId != null)
+                caseService.Notify(transferCase.AssignedOfficerId, transferCase.Id,
+                    $"{updated.PartyRole} details updated — {transferCase.CaseNumber}",
+                    $"The {updated.PartyRole.ToLower()} changed their name in the Marketplace from {oldName} to {newName}. " +
+                    "Check that it still matches their identity documents.",
+                    CaseNotificationType.SystemAnnouncement);
         }
 
         private static string Limit(string value, int max) =>

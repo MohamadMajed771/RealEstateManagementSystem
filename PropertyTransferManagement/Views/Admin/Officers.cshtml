@@ -1,27 +1,66 @@
-@model List<OfficerOption>
+@model List<StaffMember>
 @{
     ViewData["Title"] = "Officers";
 }
 
-<h2 class="mb-3">Case Officers</h2>
+<h2 class="mb-3">Officers &amp; staff accounts</h2>
 
 <partial name="_Alerts" />
 
 <div class="row g-4">
     <div class="col-lg-7">
         <table class="table align-middle">
-            <thead class="table-light"><tr><th>Officer</th><th>Active cases</th></tr></thead>
+            <thead class="table-light"><tr><th>Person</th><th>Roles</th><th>Active cases</th><th>Account</th></tr></thead>
             <tbody>
-                @foreach (var o in Model)
+                @foreach (var s in Model)
                 {
-                    <tr><td>@o.Name</td><td>@o.ActiveCases</td></tr>
+                    <tr class="@(s.IsActive ? "" : "text-muted")">
+                        <td>@s.Name<div class="small text-muted">@s.Email</div></td>
+                        <td>
+                            @foreach (var (role, has) in new[] { ("Officer", s.IsOfficer), ("Admin", s.IsAdmin) })
+                            {
+                                <form asp-action="ChangeRole" method="post" class="d-inline">
+                                    <input type="hidden" name="email" value="@s.Email" />
+                                    <input type="hidden" name="role" value="@role" />
+                                    <input type="hidden" name="grant" value="@(has ? "false" : "true")" />
+                                    <button class="btn btn-sm @(has ? "btn-secondary" : "btn-outline-secondary") mb-1"
+                                            title="@(has ? "Remove" : "Give") the @role role"
+                                            onclick="return confirm('@(has ? "Remove" : "Give") the @role role @(has ? "from" : "to") @s.Name?')">
+                                        @(has ? "✓ " : "+ ")@role
+                                    </button>
+                                </form>
+                            }
+                        </td>
+                        <td>@s.ActiveCases</td>
+                        <td>
+                            <form asp-action="SetActive" method="post">
+                                <input type="hidden" name="userId" value="@s.Id" />
+                                <input type="hidden" name="active" value="@(s.IsActive ? "false" : "true")" />
+                                @if (s.IsActive)
+                                {
+                                    <span class="badge bg-success me-1">Active</span>
+                                    <button class="btn btn-sm btn-outline-danger"
+                                            onclick="return confirm('Deactivate @s.Name? They will be signed out and cannot log in.')">Deactivate</button>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary me-1">Deactivated</span>
+                                    <button class="btn btn-sm btn-outline-success">Reactivate</button>
+                                }
+                            </form>
+                        </td>
+                    </tr>
                 }
                 @if (Model.Count == 0)
                 {
-                    <tr><td colspan="2" class="text-muted">No officers yet.</td></tr>
+                    <tr><td colspan="4" class="text-muted">No officers yet.</td></tr>
                 }
             </tbody>
         </table>
+        <p class="small text-muted">
+            An officer who still has active cases must have them reassigned (on the Admin page) before they can be
+            deactivated or lose the Officer role.
+        </p>
     </div>
 
     <div class="col-lg-5">
@@ -39,6 +78,25 @@
                             <div class="form-text">At least 6 characters with upper/lower case, a digit and a symbol.</div>
                         </div>
                         <div class="col-12"><button class="btn btn-primary w-100">Create officer</button></div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-header fw-semibold">Give a role to a registered user</div>
+            <div class="card-body">
+                <form asp-action="ChangeRole" method="post">
+                    <input type="hidden" name="grant" value="true" />
+                    <div class="row g-2">
+                        <div class="col-12"><input name="email" type="email" class="form-control" placeholder="Email of the account" required /></div>
+                        <div class="col-7">
+                            <select name="role" class="form-select">
+                                <option value="Officer">Officer</option>
+                                <option value="Admin">Admin</option>
+                            </select>
+                        </div>
+                        <div class="col-5"><button class="btn btn-outline-primary w-100">Give role</button></div>
                     </div>
                 </form>
             </div>

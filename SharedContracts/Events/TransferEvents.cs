@@ -74,6 +74,19 @@ namespace SharedContracts.Events
     }
 
     /// <summary>
+    /// A buyer or seller changed their name in the Marketplace while the
+    /// transfer is open, so the case keeps showing the right person.
+    /// Only the new name is sent (no other personal data).
+    /// </summary>
+    public record TransferInformationUpdated : TransferEvent
+    {
+        // "Buyer" or "Seller"
+        public string PartyRole { get; init; } = string.Empty;
+
+        public string FullName { get; init; } = string.Empty;
+    }
+
+    /// <summary>
     /// A participant cancelled the transfer request in the Marketplace.
     /// </summary>
     public record TransferCancelled : TransferEvent

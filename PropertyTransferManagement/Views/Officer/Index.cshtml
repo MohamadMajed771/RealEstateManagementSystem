@@ -2,6 +2,7 @@
 @{
     ViewData["Title"] = "My Assigned Cases";
     var pendingReview = ViewBag.PendingReviewByCase as Dictionary<Guid, int> ?? new();
+    var upcoming = ViewBag.UpcomingAppointments as List<CaseAppointment> ?? new();
 
     int Count(params TransferCaseStatus[] statuses) => Model.Count(c => statuses.Contains(c.Status));
 
@@ -11,6 +12,7 @@
         ("New applications", Count(TransferCaseStatus.RequestReceived)),
         ("Awaiting document review", Model.Count(c => pendingReview.ContainsKey(c.Id))),
         ("Waiting for user action", Count(TransferCaseStatus.AwaitingDocuments, TransferCaseStatus.AdditionalInformationRequired)),
+        ("Upcoming appointments", upcoming.Count),
         ("Ready for external processing", Count(TransferCaseStatus.ReadyForProcessing)),
         ("Completed", Count(TransferCaseStatus.OfficialCompletionConfirmed, TransferCaseStatus.CaseClosed))
     };
@@ -23,7 +25,7 @@
 <div class="row g-3 mb-4">
     @foreach (var (label, value) in tiles)
     {
-        <div class="col-6 col-md-4 col-xl-2">
+        <div class="col-6 col-md-3 col-xl">
             <div class="card h-100">
                 <div class="card-body">
                     <div class="small text-muted">@label</div>
@@ -33,6 +35,25 @@
         </div>
     }
 </div>
+
+@if (upcoming.Count > 0)
+{
+    <div class="card mb-4">
+        <div class="card-header fw-semibold">Upcoming appointments</div>
+        <ul class="list-group list-group-flush">
+            @foreach (var a in upcoming)
+            {
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span>
+                        <strong>@a.StartAt.ToLocalTime().ToString("ddd d MMM, HH:mm")</strong> — @a.Title
+                        <span class="small text-muted">(@a.TransferCase.CaseNumber@(string.IsNullOrWhiteSpace(a.Location) ? "" : ", " + a.Location))</span>
+                    </span>
+                    <a class="btn btn-sm btn-outline-primary" asp-action="Case" asp-route-id="@a.TransferCaseId">Open case</a>
+                </li>
+            }
+        </ul>
+    </div>
+}
 
 @if (Model.Count == 0)
 {

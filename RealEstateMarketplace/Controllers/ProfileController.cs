@@ -2,8 +2,12 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using RealEstateMarketplace.Data;
 using RealEstateMarketplace.Models;
 using RealEstateMarketplace.Services;
+using RealEstateMarketplace.Services.Messaging;
+using SharedContracts.Events;
 using RealEstateMarketplace.ViewModels;
 
 namespace RealEstateMarketplace.Controllers
@@ -13,13 +17,16 @@ namespace RealEstateMarketplace.Controllers
     {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly PropertyPhotoService _photos;
+        private readonly ApplicationDbContext _context;
 
         public ProfileController(
             UserManager<ApplicationUser> userManager,
-            PropertyPhotoService photos)
+            PropertyPhotoService photos,
+            ApplicationDbContext context)
         {
             _userManager = userManager;
             _photos = photos;
+            _context = context;
         }
 
         // POST: /Profile/UploadPicture
@@ -137,12 +144,38 @@ namespace RealEstateMarketplace.Controllers
                 return Challenge();
             }
 
+            var oldName = $"{user.FirstName} {user.LastName}";
             user.FirstName = model.FirstName.Trim();
             user.LastName = model.LastName.Trim();
             user.PhoneNumber = string.IsNullOrWhiteSpace(
                 model.PhoneNumber)
                 ? null
                 : model.PhoneNumber.Trim();
+
+            // Open transfer cases show the buyer's and seller's names: tell the
+            // Transfer Service about a new name (TransferInformationUpdated).
+            // Identity saves through the same DbContext, so the outbox rows are
+            // stored in the same save as the profile.
+            var newName = $"{user.FirstName} {user.LastName}";
+            if (newName != oldName)
+            {
+                var open = await _context.TransferRequests
+                    .AsNoTracking()
+                    .Where(r => (r.Transaction.BuyerId == user.Id || r.Transaction.SellerId == user.Id) &&
+                                r.Status != TransferRequestStatus.Completed &&
+                                r.Status != TransferRequestStatus.Rejected &&
+                                r.Status != TransferRequestStatus.Cancelled)
+                    .Select(r => new { r.Id, IsBuyer = r.Transaction.BuyerId == user.Id })
+                    .ToListAsync();
+
+                foreach (var r in open)
+                    Outbox.Add(_context, new TransferInformationUpdated
+                    {
+                        TransferRequestId = r.Id,
+                        PartyRole = r.IsBuyer ? "Buyer" : "Seller",
+                        FullName = newName
+                    });
+            }
 
             var result = await _userManager.UpdateAsync(user);
 

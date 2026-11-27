@@ -59,6 +59,17 @@ namespace PropertyTransferManagement.Controllers
                 .GroupBy(d => d.TransferCaseId)
                 .ToDictionaryAsync(g => g.Key, g => g.Count());
 
+            // Upcoming appointments on my cases (spec §25), soonest first.
+            var now = DateTime.UtcNow;
+            ViewBag.UpcomingAppointments = await _db.CaseAppointments
+                .AsNoTracking()
+                .Include(a => a.TransferCase)
+                .Where(a => caseIds.Contains(a.TransferCaseId) && a.StartAt >= now &&
+                            (a.Status == CaseAppointmentStatus.Scheduled || a.Status == CaseAppointmentStatus.Rescheduled))
+                .OrderBy(a => a.StartAt)
+                .Take(10)
+                .ToListAsync();
+
             return View(cases);
         }
 

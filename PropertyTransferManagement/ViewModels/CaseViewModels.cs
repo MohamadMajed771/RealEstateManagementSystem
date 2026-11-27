@@ -55,6 +55,18 @@ namespace PropertyTransferManagement.ViewModels
         public int ActiveCases { get; set; }
     }
 
+    /// <summary>A staff account (officer and/or admin) on the Officers page.</summary>
+    public class StaffMember
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public bool IsActive { get; set; }
+        public bool IsOfficer { get; set; }
+        public bool IsAdmin { get; set; }
+        public int ActiveCases { get; set; }
+    }
+
     public class AdminDashboardViewModel
     {
         public int TotalCases { get; set; }

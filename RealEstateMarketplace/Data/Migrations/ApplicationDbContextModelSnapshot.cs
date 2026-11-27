@@ -1229,11 +1229,23 @@ namespace RealEstateMarketplace.Data.Migrations
                     b.Property<bool>("EmailNotificationsEnabled")
                         .HasColumnType("bit");
 
+                    b.Property<bool?>("Furnished")
+                        .HasColumnType("bit");
+
+                    b.Property<bool?>("HasParking")
+                        .HasColumnType("bit");
+
                     b.Property<bool>("InAppNotificationsEnabled")
                         .HasColumnType("bit");
 
+                    b.Property<double?>("Latitude")
+                        .HasColumnType("float");
+
                     b.Property<int?>("ListingType")
                         .HasColumnType("int");
+
+                    b.Property<double?>("Longitude")
+                        .HasColumnType("float");
 
                     b.Property<decimal?>("MaxPrice")
                         .HasPrecision(18, 2)
@@ -1264,6 +1276,9 @@ namespace RealEstateMarketplace.Data.Migrations
 
                     b.Property<int?>("PropertyType")
                         .HasColumnType("int");
+
+                    b.Property<double?>("RadiusKm")
+                        .HasColumnType("float");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
