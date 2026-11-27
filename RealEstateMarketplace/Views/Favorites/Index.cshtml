@@ -168,5 +168,40 @@
                 </div>
             }
         </div>
+
+        @if (Model.Count() >= 2)
+        {
+            var items = Model.ToList();
+            string Money(decimal v, string c) => v.ToString("N0") + " " + c;
+
+            <h2 class="h4 fw-bold mt-5 mb-3">
+                <i class="bi bi-layout-three-columns me-1"></i> Compare your favorites
+            </h2>
+            <div class="table-responsive">
+                <table class="table table-bordered align-middle bg-white">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="min-width:140px"></th>
+                            @foreach (var p in items)
+                            {
+                                <th style="min-width:180px">
+                                    <a asp-controller="Properties" asp-action="Details" asp-route-id="@p.Id">@p.Title</a>
+                                </th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><th>Offer</th>@foreach (var p in items) { <td>@(p.ListingType == ListingType.Sale ? "For sale" : "For rent")</td> }</tr>
+                        <tr><th>Price</th>@foreach (var p in items) { <td>@Money(p.Price, p.Currency)@(p.ListingType == ListingType.Rent ? " / month" : "")</td> }</tr>
+                        <tr><th>Type</th>@foreach (var p in items) { <td>@p.PropertyType</td> }</tr>
+                        <tr><th>Location</th>@foreach (var p in items) { <td>@p.City@(string.IsNullOrWhiteSpace(p.Area) ? "" : ", " + p.Area)</td> }</tr>
+                        <tr><th>Surface</th>@foreach (var p in items) { <td>@p.SizeSquareMeters.ToString("N0") m²</td> }</tr>
+                        <tr><th>Price per m²</th>@foreach (var p in items) { <td>@(p.SizeSquareMeters > 0 ? Money(p.Price / p.SizeSquareMeters, p.Currency) : "—")</td> }</tr>
+                        <tr><th>Bedrooms</th>@foreach (var p in items) { <td>@(p.Bedrooms?.ToString() ?? "—")</td> }</tr>
+                        <tr><th>Bathrooms</th>@foreach (var p in items) { <td>@(p.Bathrooms?.ToString() ?? "—")</td> }</tr>
+                    </tbody>
+                </table>
+            </div>
+        }
     }
 </div>

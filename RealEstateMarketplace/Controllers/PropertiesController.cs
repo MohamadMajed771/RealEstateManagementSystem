@@ -1,8 +1,9 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using RealEstateMarketplace.Data;
 using RealEstateMarketplace.Models;
+using RealEstateMarketplace.Services;
 using RealEstateMarketplace.ViewModels;
 
 namespace RealEstateMarketplace.Controllers
@@ -10,127 +11,33 @@ namespace RealEstateMarketplace.Controllers
     public class PropertiesController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly PropertySearchService _search;
 
-        public PropertiesController(ApplicationDbContext context)
+        public PropertiesController(
+            ApplicationDbContext context,
+            PropertySearchService search)
         {
             _context = context;
+            _search = search;
         }
 
         // GET: /Properties
+        // Main page: interactive map + advanced filters.
         [HttpGet]
-        public async Task<IActionResult> Index(
-            ListingType? listingType,
-            PropertyType? propertyType,
-            string? city,
-            decimal? minPrice,
-            decimal? maxPrice,
-            int? minBedrooms,
-            int? minBathrooms,
-            decimal? minSize)
+        public async Task<IActionResult> Index(PropertySearchCriteria criteria)
         {
-            // Only approved and non-deleted listings
-            var query = _context.PropertyListings
-                .AsNoTracking()
-                .Where(l =>
-                    l.Status == ListingStatus.Approved &&
-                    !l.IsDeleted);
-
-            // Filter by sale or rent
-            if (listingType.HasValue &&
-                Enum.IsDefined(typeof(ListingType), listingType.Value))
-            {
-                query = query.Where(l =>
-                    l.ListingType == listingType.Value);
-            }
-
-            // Filter by property type
-            if (propertyType.HasValue &&
-                Enum.IsDefined(typeof(PropertyType), propertyType.Value))
-            {
-                query = query.Where(l =>
-                    l.Property.Type == propertyType.Value);
-            }
-
-            // Filter by city
-            if (!string.IsNullOrWhiteSpace(city))
-            {
-                string searchCity = city.Trim();
-
-                query = query.Where(l =>
-                    l.Property.City.Contains(searchCity));
-            }
-
-            // Filter by minimum price
-            if (minPrice.HasValue && minPrice.Value >= 0)
-            {
-                query = query.Where(l =>
-                    l.Price >= minPrice.Value);
-            }
-
-            // Filter by maximum price
-            if (maxPrice.HasValue && maxPrice.Value >= 0)
-            {
-                query = query.Where(l =>
-                    l.Price <= maxPrice.Value);
-            }
-
-            // Filter by minimum bedrooms
-            if (minBedrooms.HasValue && minBedrooms.Value >= 0)
-            {
-                query = query.Where(l =>
-                    l.Property.Bedrooms >= minBedrooms.Value);
-            }
-
-            // Filter by minimum bathrooms
-            if (minBathrooms.HasValue && minBathrooms.Value >= 0)
-            {
-                query = query.Where(l =>
-                    l.Property.Bathrooms >= minBathrooms.Value);
-            }
-
-            // Filter by minimum surface area
-            if (minSize.HasValue && minSize.Value >= 0)
-            {
-                query = query.Where(l =>
-                    l.Property.SizeSquareMeters >= minSize.Value);
-            }
+            var listings = await _search.SearchAsync(criteria);
 
             // Save selected filters for the view
-            ViewBag.ListingType = listingType;
-            ViewBag.PropertyType = propertyType;
-            ViewBag.City = city;
-            ViewBag.MinPrice = minPrice;
-            ViewBag.MaxPrice = maxPrice;
-            ViewBag.MinBedrooms = minBedrooms;
-            ViewBag.MinBathrooms = minBathrooms;
-            ViewBag.MinSize = minSize;
-
-            // Execute filtered query
-            var listings = await query
-                .OrderByDescending(l => l.CreatedAt)
-                .Select(l => new PublicPropertyCardViewModel
-                {
-                    Id = l.Id,
-                    Title = l.Title,
-                    PropertyType = l.Property.Type,
-                    ListingType = l.ListingType,
-                    Price = l.Price,
-                    Currency = l.Currency,
-                    City = l.Property.City,
-                    Area = l.Property.Area,
-                    SizeSquareMeters = l.Property.SizeSquareMeters,
-                    Bedrooms = l.Property.Bedrooms,
-                    Bathrooms = l.Property.Bathrooms,
-                    CreatedAt = l.CreatedAt,
-
-                    CoverPhotoPath = _context.PropertyPhotos
-                        .Where(p => p.PropertyListingId == l.Id)
-                        .OrderByDescending(p => p.IsCoverPhoto)
-                        .ThenBy(p => p.DisplayOrder)
-                        .Select(p => p.ImagePath)
-                        .FirstOrDefault()
-                })
-                .ToListAsync();
+            ViewBag.Criteria = criteria;
+            ViewBag.ListingType = criteria.ListingType;
+            ViewBag.PropertyType = criteria.PropertyType;
+            ViewBag.City = criteria.City;
+            ViewBag.MinPrice = criteria.MinPrice;
+            ViewBag.MaxPrice = criteria.MaxPrice;
+            ViewBag.MinBedrooms = criteria.MinBedrooms;
+            ViewBag.MinBathrooms = criteria.MinBathrooms;
+            ViewBag.MinSize = criteria.MinSize;
 
             return View(listings);
         }
@@ -143,11 +50,15 @@ namespace RealEstateMarketplace.Controllers
                 .AsNoTracking()
                 .Where(l =>
                     l.Id == id &&
-                    l.Status == ListingStatus.Approved &&
+                    // Sold / rented listings stay readable (with their reviews), but cannot be requested.
+                    (l.Status == ListingStatus.Approved ||
+                     l.Status == ListingStatus.Sold ||
+                     l.Status == ListingStatus.Rented) &&
                     !l.IsDeleted)
                 .Select(l => new PublicPropertyDetailsViewModel
                 {
                     Id = l.Id,
+                    Status = l.Status,
                     Title = l.Title,
                     Description = l.Description,
                     ListingType = l.ListingType,
@@ -173,6 +84,21 @@ namespace RealEstateMarketplace.Controllers
                         l.Property.Owner.LastName,
 
                     PublishedAt = l.PublishedAt,
+                    ParkingSpaces = l.Property.ParkingSpaces,
+                    IsFurnished = l.Property.IsFurnished,
+                    HasBalcony = l.Property.HasBalcony,
+                    HasGarden = l.Property.HasGarden,
+                    HasTerrace = l.Property.HasTerrace,
+                    OtherFacilities = l.Property.OtherFacilities,
+                    RentalPeriodMonths = l.RentalPeriodMonths,
+                    InstallmentsAccepted = l.InstallmentsAccepted,
+                    InstallmentMonths = l.InstallmentMonths,
+                    IsFeatured = l.FeaturedUntil != null && l.FeaturedUntil > DateTime.UtcNow,
+                    ViewCount = l.ViewCount,
+                    SellerMemberSince = l.Property.Owner.CreatedAt,
+                    SellerPublishedListings = _context.PropertyListings.Count(o =>
+                        o.Property.OwnerId == l.Property.OwnerId &&
+                        o.Status == ListingStatus.Approved && !o.IsDeleted),
 
                     Photos = _context.PropertyPhotos
                         .Where(p => p.PropertyListingId == l.Id)
@@ -196,6 +122,35 @@ namespace RealEstateMarketplace.Controllers
             }
 
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            // Count views by visitors (not the owner) for "most viewed" stats.
+            if (userId != property.SellerId)
+            {
+                await _context.PropertyListings
+                    .Where(l => l.Id == id)
+                    .ExecuteUpdateAsync(s => s.SetProperty(l => l.ViewCount, l => l.ViewCount + 1));
+            }
+
+            // Reviews come only from completed, verified transactions.
+            property.Reviews = await _context.PropertyReviews
+                .AsNoTracking()
+                .Where(r =>
+                    r.Transaction.PropertyListingId == id &&
+                    r.Status == ReviewStatus.Approved &&
+                    !r.IsDeleted)
+                .OrderByDescending(r => r.CreatedAt)
+                .Select(r => new PropertyReviewItem
+                {
+                    ReviewerName = r.Reviewer.FirstName + " " + r.Reviewer.LastName.Substring(0, 1) + ".",
+                    Rating = r.Rating,
+                    AccuracyRating = r.AccuracyRating,
+                    ConditionRating = r.ConditionRating,
+                    CommunicationRating = r.CommunicationRating,
+                    IsRental = r.Transaction.TransactionType == ListingType.Rent,
+                    Comment = r.Comment,
+                    CreatedAt = r.CreatedAt
+                })
+                .ToListAsync();
 
             ViewBag.IsFavorite = false;
 

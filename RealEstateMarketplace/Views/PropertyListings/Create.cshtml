@@ -100,6 +100,9 @@
                         </div>
 
                         <div class="mb-4">
+                            <button type="button" id="gpsLocationButton" class="btn btn-outline-success me-2">
+                                <i class="bi bi-geo-alt"></i> Use my current location (GPS)
+                            </button>
                             <button type="button"
                                     id="findOnMapButton"
                                     class="btn btn-outline-primary">
@@ -182,6 +185,8 @@
                             </div>
                         </div>
 
+                        <partial name="_ListingExtraFields" model="Model" view-data='new ViewDataDictionary(ViewData) { ["Section"] = "facilities" }' />
+
                         <hr class="my-4" />
 
                         <h5 class="mb-3">Advertisement Details</h5>
@@ -232,6 +237,8 @@
                                       class="text-danger"></span>
                             </div>
                         </div>
+
+                        <partial name="_ListingExtraFields" model="Model" view-data='new ViewDataDictionary(ViewData) { ["Section"] = "terms" }' />
 
                         
                         <hr class="my-4" />
@@ -451,6 +458,22 @@
                     }
                 }
             }
+
+            // GPS: the owner is at the property and uses the device location.
+            document.getElementById("gpsLocationButton").addEventListener("click", function () {
+                if (!navigator.geolocation) {
+                    status.textContent = "Your browser does not support location detection. Click the map instead.";
+                    return;
+                }
+                status.textContent = "Detecting your current location...";
+                navigator.geolocation.getCurrentPosition(function (pos) {
+                    const lat = pos.coords.latitude, lng = pos.coords.longitude;
+                    map.setView([lat, lng], 17);
+                    selectLocation(lat, lng);
+                }, function () {
+                    status.textContent = "Location permission was denied or unavailable. Click the map or search the address instead.";
+                }, { enableHighAccuracy: true, timeout: 15000 });
+            });
 
             map.on("click", function (event) {
                 selectLocation(event.latlng.lat, event.latlng.lng);

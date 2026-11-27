@@ -1,0 +1,93 @@
+@model List<AdminUserRow>
+@{
+    ViewData["Title"] = "Users";
+    string? q = ViewBag.Query;
+    string? filter = ViewBag.Filter;
+}
+
+<div class="container-xl py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="mb-0">Users</h2>
+        <div class="d-flex gap-2">
+            <a class="btn btn-sm btn-outline-success" href="~/Admin/Export/Users?format=xlsx">Excel</a>
+            <a class="btn btn-sm btn-outline-danger" href="~/Admin/Export/Users?format=pdf">PDF</a>
+        </div>
+    </div>
+    <partial name="_AdminAlerts" />
+
+    <form method="get" class="row g-2 mb-3">
+        <div class="col-md-5">
+            <input name="q" value="@q" class="form-control" placeholder="Search by name or email" />
+        </div>
+        <div class="col-md-3">
+            <select name="filter" class="form-select">
+                <option value="">All users</option>
+                <option value="suspended" selected="@(filter == "suspended")">Suspended</option>
+                <option value="unconfirmed" selected="@(filter == "unconfirmed")">Email not confirmed</option>
+            </select>
+        </div>
+        <div class="col-md-2"><button class="btn btn-primary w-100">Filter</button></div>
+    </form>
+
+    <div class="table-responsive">
+        <table class="table table-hover align-middle bg-white">
+            <thead class="table-light">
+                <tr>
+                    <th>User</th>
+                    <th>Joined</th>
+                    <th class="text-center">Listings</th>
+                    <th class="text-center">Reports on listings</th>
+                    <th>Status</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var u in Model)
+                {
+                    <tr>
+                        <td>
+                            <div class="fw-semibold">@u.FullName
+                                @if (u.IsAdmin) { <span class="badge bg-dark ms-1">Admin</span> }
+                            </div>
+                            <div class="small text-muted">@u.Email
+                                @if (!u.EmailConfirmed) { <span class="badge bg-warning text-dark ms-1">unconfirmed</span> }
+                            </div>
+                        </td>
+                        <td class="small">@u.CreatedAt.ToLocalTime().ToString("d")</td>
+                        <td class="text-center">@u.ListingCount</td>
+                        <td class="text-center">
+                            @if (u.ReportsAgainst > 0) { <span class="badge bg-danger">@u.ReportsAgainst</span> } else { <span>0</span> }
+                        </td>
+                        <td>
+                            @if (u.IsActive) { <span class="badge bg-success">Active</span> }
+                            else { <span class="badge bg-secondary">Suspended</span> }
+                        </td>
+                        <td class="text-end">
+                            <div class="d-inline-flex gap-1 flex-wrap justify-content-end">
+                                @if (u.IsActive)
+                                {
+                                    <form asp-action="Suspend" asp-route-id="@u.Id" method="post" class="d-inline-flex gap-1">
+                                        <input name="reason" class="form-control form-control-sm" style="width:180px" placeholder="Reason" required />
+                                        <button class="btn btn-sm btn-outline-danger" onclick="return confirm('Suspend this account?');">Suspend</button>
+                                    </form>
+                                }
+                                else
+                                {
+                                    <form asp-action="Reactivate" asp-route-id="@u.Id" method="post">
+                                        <button class="btn btn-sm btn-outline-success">Reactivate</button>
+                                    </form>
+                                }
+                                <form asp-action="ToggleAdmin" asp-route-id="@u.Id" method="post">
+                                    <button class="btn btn-sm btn-outline-dark"
+                                            onclick="return confirm('Change the admin role of this user?');">
+                                        @(u.IsAdmin ? "Remove admin" : "Make admin")
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

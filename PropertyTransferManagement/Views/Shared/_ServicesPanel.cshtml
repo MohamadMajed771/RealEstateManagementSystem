@@ -1,0 +1,67 @@
+@model (List<ServicePayment> Payments, TransferCase Case, bool IsOfficer)
+
+<div class="card shadow-sm mb-4">
+    <div class="card-header fw-semibold">
+        @(Model.IsOfficer ? "Service payments" : "Optional assistance services")
+    </div>
+    <div class="card-body">
+        <p class="small text-muted">
+            Service fees of the transfer service only — not government taxes, registration fees or other official charges.
+        </p>
+
+        @if (!Model.IsOfficer && !CaseWorkflow.IsFinished(Model.Case.Status))
+        {
+            <div class="row g-2 mb-3">
+                @foreach (var s in ServiceCatalog.All)
+                {
+                    var paid = Model.Payments.Any(p => p.ServiceName == s.Name && p.Status == ServicePaymentStatus.Succeeded);
+                    <div class="col-md-4">
+                        <div class="border rounded p-2 h-100 d-flex flex-column">
+                            <div class="fw-semibold small">@s.Name</div>
+                            <div class="small text-muted flex-grow-1">@s.Description</div>
+                            <div class="d-flex justify-content-between align-items-center mt-2">
+                                <strong>@s.Price.ToString("N2") USD</strong>
+                                @if (paid) { <span class="badge bg-success">Paid</span> }
+                                else
+                                {
+                                    <form asp-controller="ServicePayments" asp-action="Start" method="post">
+                                        <input type="hidden" name="caseId" value="@Model.Case.Id" />
+                                        <input type="hidden" name="serviceCode" value="@s.Code" />
+                                        <button class="btn btn-sm btn-outline-success">Buy</button>
+                                    </form>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+
+        @if (Model.Payments.Count > 0)
+        {
+            <table class="table table-sm small mb-0">
+                <thead><tr><th>Date</th><th>Service</th>@if (Model.IsOfficer) { <th>Paid by</th> }<th class="text-end">Amount</th><th>Status</th><th></th></tr></thead>
+                <tbody>
+                @foreach (var p in Model.Payments)
+                {
+                    <tr>
+                        <td>@p.CreatedAt.ToLocalTime().ToString("d")</td>
+                        <td>@p.ServiceName</td>
+                        @if (Model.IsOfficer) { <td>@p.PaidByUser?.Email</td> }
+                        <td class="text-end">@p.Amount.ToString("N2") @p.Currency</td>
+                        <td><span class="badge @(p.Status == ServicePaymentStatus.Succeeded ? "bg-success" : p.Status == ServicePaymentStatus.Failed ? "bg-danger" : "bg-secondary")">@p.Status</span></td>
+                        <td>
+                            @if (!Model.IsOfficer && p.Status == ServicePaymentStatus.Succeeded) { <a asp-controller="ServicePayments" asp-action="Receipt" asp-route-id="@p.Id">Receipt</a> }
+                            else if (!Model.IsOfficer && p.Status is ServicePaymentStatus.Pending or ServicePaymentStatus.Failed) { <a asp-controller="ServicePayments" asp-action="Checkout" asp-route-id="@p.Id">Pay</a> }
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        }
+        else if (Model.IsOfficer)
+        {
+            <p class="small text-muted mb-0">No service payments for this case.</p>
+        }
+    </div>
+</div>

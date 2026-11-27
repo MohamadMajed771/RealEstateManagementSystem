@@ -1,4 +1,4 @@
-﻿
+
 @model RealEstateMarketplace.Models.ApplicationUser
 
 @{
@@ -35,6 +35,40 @@
                 </div>
 
                 <div class="card-body p-4">
+
+                    @if (TempData["ErrorMessage"] != null)
+                    {
+                        <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
+                    }
+
+                    <!-- Profile picture (optional) -->
+                    <div class="d-flex align-items-center gap-3 mb-4">
+                        @if (!string.IsNullOrEmpty(Model.ProfilePicturePath))
+                        {
+                            <img src="@Model.ProfilePicturePath" alt="Profile picture"
+                                 class="rounded-circle border" style="width:96px;height:96px;object-fit:cover" />
+                        }
+                        else
+                        {
+                            <div class="rounded-circle bg-light border d-flex align-items-center justify-content-center fs-2 fw-bold text-secondary"
+                                 style="width:96px;height:96px">
+                                @(Model.FirstName.Length > 0 ? Model.FirstName[..1].ToUpper() : "?")
+                            </div>
+                        }
+                        <div>
+                            <form asp-action="UploadPicture" method="post" enctype="multipart/form-data" class="d-flex gap-2">
+                                <input type="file" name="picture" accept=".jpg,.jpeg,.png,.webp" class="form-control form-control-sm" required />
+                                <button class="btn btn-sm btn-primary text-nowrap">Upload picture</button>
+                            </form>
+                            <div class="form-text">Optional. JPG, PNG or WebP, up to 5 MB.</div>
+                            @if (!string.IsNullOrEmpty(Model.ProfilePicturePath))
+                            {
+                                <form asp-action="RemovePicture" method="post" class="mt-1">
+                                    <button class="btn btn-sm btn-link text-danger p-0">Remove picture</button>
+                                </form>
+                            }
+                        </div>
+                    </div>
 
                     <!-- Personal Information -->
                     <h5 class="mb-4">Personal Information</h5>
@@ -108,11 +142,44 @@
                             My Favorites
                         </a>
 
+                        <!-- Saved searches, conversations, notifications (spec §4) -->
+                        <a asp-controller="SavedSearches"
+                           asp-action="Index"
+                           class="btn btn-outline-info">
+                            Saved Searches
+                        </a>
+
+                        <a asp-controller="Chat"
+                           asp-action="Index"
+                           class="btn btn-outline-primary">
+                            My Conversations
+                        </a>
+
+                        <a asp-controller="Notifications"
+                           asp-action="Index"
+                           class="btn btn-outline-secondary">
+                            Notifications
+                        </a>
+
                         <!-- My Requests -->
                         <a asp-controller="PropertyInquiries"
                            asp-action="MyRequests"
                            class="btn btn-outline-success">
                             My Requests
+                        </a>
+
+                        <!-- Promotion payments -->
+                        <a asp-controller="Promotions"
+                           asp-action="MyPayments"
+                           class="btn btn-outline-warning">
+                            My Payments
+                        </a>
+
+                        <!-- Transactions & reviews -->
+                        <a asp-controller="Transactions"
+                           asp-action="MyTransactions"
+                           class="btn btn-outline-dark">
+                            Transactions &amp; Reviews
                         </a>
 
                         <!-- Change Password -->

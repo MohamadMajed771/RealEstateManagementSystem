@@ -1,0 +1,69 @@
+@model List<MyCaseRow>
+@{
+    ViewData["Title"] = "My Cases";
+}
+
+<h2 class="mb-3">My Transfer Cases</h2>
+
+<partial name="_Alerts" />
+
+@if (Model.Count == 0)
+{
+    <div class="alert alert-info">
+        No transfer case is linked to your account yet. Cases appear here automatically when
+        the Marketplace sends a transfer request for a sale where you are the buyer or the seller,
+        using the same email address as this account.
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Case</th>
+                    <th>Property</th>
+                    <th>My role</th>
+                    <th>Agreed price</th>
+                    <th>Status</th>
+                    <th>Officer</th>
+                    <th>To upload</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var row in Model)
+                {
+                    <tr>
+                        <td class="fw-semibold">@row.Case.CaseNumber</td>
+                        <td>
+                            @row.Case.PropertyTitle
+                            <div class="small text-muted">@row.Case.City, @row.Case.Country</div>
+                        </td>
+                        <td>@string.Join(", ", row.MyRoles)</td>
+                        <td>@row.Case.AgreedPrice.ToString("N0") @row.Case.Currency</td>
+                        <td>
+                            <span class="badge @CaseWorkflow.BadgeClass(row.Case.Status)">
+                                @CaseWorkflow.Display(row.Case.Status)
+                            </span>
+                        </td>
+                        <td>@(row.OfficerName ?? "Not assigned yet")</td>
+                        <td>
+                            @if (row.DocumentsToUpload > 0)
+                            {
+                                <span class="badge bg-warning text-dark">@row.DocumentsToUpload document(s)</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted">—</span>
+                            }
+                        </td>
+                        <td>
+                            <a class="btn btn-sm btn-primary" asp-action="Details" asp-route-id="@row.Case.Id">Open</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

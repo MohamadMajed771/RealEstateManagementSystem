@@ -1,0 +1,178 @@
+@model CaseDetailsViewModel
+@{
+    var c = Model.Case;
+    ViewData["Title"] = c.CaseNumber;
+}
+
+<div class="d-flex justify-content-between align-items-start mb-3">
+    <div>
+        <h2 class="mb-1">Case @c.CaseNumber</h2>
+        <div class="text-muted">
+            @c.PropertyTitle — @c.City, @c.Country · You are the <strong>@string.Join(" / ", Model.MyRoles).ToLower()</strong>
+        </div>
+    </div>
+    <span class="badge fs-6 @CaseWorkflow.BadgeClass(c.Status)">@CaseWorkflow.Display(c.Status)</span>
+</div>
+
+<partial name="_Alerts" />
+
+<div class="row g-4">
+    <div class="col-lg-8">
+
+        <!-- DOCUMENT CHECKLIST -->
+        <div class="card mb-4">
+            <div class="card-header fw-semibold">Your document checklist</div>
+            <ul class="list-group list-group-flush">
+                @foreach (var r in Model.MyRequirements)
+                {
+                    var (label, css) = r.Status switch
+                    {
+                        DocumentRequirementStatus.Approved => ("Accepted", "bg-success"),
+                        DocumentRequirementStatus.Submitted => ("Under review", "bg-info text-dark"),
+                        DocumentRequirementStatus.Rejected => ("Correction needed", "bg-danger"),
+                        DocumentRequirementStatus.Waived => ("Not needed", "bg-secondary"),
+                        _ => ("Missing", "bg-warning text-dark")
+                    };
+
+                    var lastReview = Model.MyDocuments
+                        .Where(d => d.CaseDocumentRequirementId == r.Id)
+                        .SelectMany(d => d.Reviews)
+                        .OrderByDescending(rv => rv.ReviewedAt)
+                        .FirstOrDefault();
+
+                    <li class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <div class="fw-semibold">@r.DocumentType.Name</div>
+                                <div class="small text-muted">@r.Instructions</div>
+                                @if (r.Status == DocumentRequirementStatus.Rejected && lastReview?.Comments != null)
+                                {
+                                    <div class="small text-danger mt-1">Officer: @lastReview.Comments</div>
+                                }
+                            </div>
+                            <span class="badge @css">@label</span>
+                        </div>
+
+                        @if (Model.CanUpload && r.Status != DocumentRequirementStatus.Approved &&
+                             r.Status != DocumentRequirementStatus.Waived)
+                        {
+                            <form asp-action="Upload" method="post" enctype="multipart/form-data"
+                                  class="row g-2 align-items-center mt-2 doc-upload-form">
+                                <input type="hidden" name="caseId" value="@c.Id" />
+                                <input type="hidden" name="requirementId" value="@r.Id" />
+                                <div class="col-sm-8">
+                                    <input type="file" name="file" class="form-control form-control-sm doc-file"
+                                           accept=".pdf,.jpg,.jpeg,.png" required />
+                                </div>
+                                <div class="col-12 doc-ocr d-none">
+                                    <div class="small text-muted mb-1 doc-ocr-status"></div>
+                                    <label class="form-label small mb-1">
+                                        Details read from the image (OCR) — check and correct them before uploading.
+                                        They help the officer but are not legally verified.
+                                    </label>
+                                    <textarea name="confirmedDetails" rows="4" maxlength="2000"
+                                              class="form-control form-control-sm doc-ocr-text"></textarea>
+                                    <div class="form-check mt-1">
+                                        <input type="checkbox" name="detailsChecked" value="true" id="ocr-check-@r.Id"
+                                               class="form-check-input doc-ocr-check" />
+                                        <label class="form-check-label small" for="ocr-check-@r.Id">
+                                            I checked these details and they match the document.
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-sm-4">
+                                    <button type="submit" class="btn btn-sm btn-primary w-100">
+                                        @(r.Status == DocumentRequirementStatus.Pending ? "Upload" : "Upload new version")
+                                    </button>
+                                </div>
+                            </form>
+                        }
+                    </li>
+                }
+            </ul>
+            <div class="card-footer small text-muted">
+                PDF, JPG or PNG, up to 10 MB. Files are stored privately and only you, the assigned
+                officer and administrators can open them.
+            </div>
+        </div>
+
+        <!-- MY UPLOADS -->
+        @if (Model.MyDocuments.Count > 0)
+        {
+            <div class="card mb-4">
+                <div class="card-header fw-semibold">My uploads</div>
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0 align-middle">
+                        <thead><tr><th>Document</th><th>File</th><th>Version</th><th>Status</th><th>Uploaded</th></tr></thead>
+                        <tbody>
+                            @foreach (var d in Model.MyDocuments)
+                            {
+                                <tr>
+                                    <td>@d.DocumentType.Name</td>
+                                    <td><a asp-action="Download" asp-route-id="@d.Id" target="_blank">@d.OriginalFileName</a></td>
+                                    <td>v@(d.Version)</td>
+                                    <td>@d.Status</td>
+                                    <td>@d.UploadedAt.ToLocalTime().ToString("g")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+
+        <partial name="_CaseChat" model="Model.Conversations" />
+
+        <partial name="_CaseAppointments" model="(Model.Appointments, false, c.Id)" />
+
+        @if (Model.MyRoles.Contains(CaseParticipantRole.Buyer))
+        {
+            <partial name="_LoanBuyer" model="(Model.MyLoanRequests, c)" />
+        }
+
+        <partial name="_ServicesPanel" model="(Model.MyPayments, c, false)" />
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card mb-4">
+            <div class="card-header fw-semibold">Case information</div>
+            <div class="card-body small">
+                <dl class="row mb-0">
+                    <dt class="col-5">Agreed price</dt><dd class="col-7">@c.AgreedPrice.ToString("N0") @c.Currency</dd>
+                    <dt class="col-5">Property</dt><dd class="col-7">@c.PropertyType, @(c.SizeSquareMeters?.ToString("N0")) m²</dd>
+                    <dt class="col-5">Address</dt><dd class="col-7">@c.StreetAddress @c.Area, @c.City</dd>
+                    <dt class="col-5">Buyer</dt><dd class="col-7">@c.BuyerFullName</dd>
+                    <dt class="col-5">Seller</dt><dd class="col-7">@c.SellerFullName</dd>
+                    <dt class="col-5">Officer</dt><dd class="col-7">@(Model.OfficerName ?? "Not assigned yet")</dd>
+                    <dt class="col-5">Opened</dt><dd class="col-7">@c.CreatedAt.ToLocalTime().ToString("d")</dd>
+                </dl>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header fw-semibold">Progress</div>
+            <ul class="list-group list-group-flush small">
+                @foreach (var h in Model.History)
+                {
+                    <li class="list-group-item">
+                        <div class="d-flex justify-content-between">
+                            <span class="fw-semibold">@CaseWorkflow.Display(h.NewStatus)</span>
+                            <span class="text-muted">@h.ChangedAt.ToLocalTime().ToString("g")</span>
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(h.Reason))
+                        {
+                            <div class="text-muted">@h.Reason</div>
+                        }
+                    </li>
+                }
+            </ul>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/case-chat.js" asp-append-version="true"></script>
+    <!-- Free OCR that runs in the browser: the document never leaves the computer for OCR. -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <script src="~/js/document-ocr.js" asp-append-version="true"></script>
+}

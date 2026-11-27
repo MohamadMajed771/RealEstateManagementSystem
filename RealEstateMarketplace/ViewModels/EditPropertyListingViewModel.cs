@@ -5,7 +5,7 @@ using RealEstateMarketplace.Models;
 
 namespace RealEstateMarketplace.ViewModels
 {
-    public class EditPropertyListingViewModel
+    public partial class EditPropertyListingViewModel
     {
         // ==========================================
         // LISTING IDENTIFIER

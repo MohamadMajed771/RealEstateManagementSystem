@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using RealEstateMarketplace.Data;
 using RealEstateMarketplace.Models;
+using RealEstateMarketplace.Services;
 
 namespace RealEstateMarketplace.Controllers
 {
@@ -52,7 +53,14 @@ namespace RealEstateMarketplace.Controllers
             decimal? maxPrice,
             int? minBedrooms,
             int? minBathrooms,
-            decimal? minSize)
+            decimal? minSize,
+            decimal? maxSize,
+            bool? hasParking,
+            bool? furnished,
+            double? lat,
+            double? lng,
+            double? radiusKm,
+            bool emailMe = false)
         {
             var userId = _userManager.GetUserId(User);
 
@@ -73,8 +81,20 @@ namespace RealEstateMarketplace.Controllers
                 MinBedrooms = minBedrooms,
                 MinBathrooms = minBathrooms,
                 MinSizeSquareMeters = minSize,
+                MaxSizeSquareMeters = maxSize,
+                HasParking = hasParking == true ? true : null,
+                Furnished = furnished,
+                EmailNotificationsEnabled = emailMe,
                 CreatedAt = DateTime.UtcNow
             };
+
+            // The map area is kept only when it is complete and valid.
+            if (new PropertySearchCriteria { Lat = lat, Lng = lng, RadiusKm = radiusKm }.HasDistanceFilter)
+            {
+                savedSearch.Latitude = lat;
+                savedSearch.Longitude = lng;
+                savedSearch.RadiusKm = radiusKm;
+            }
 
             var validationResults = new List<
                 System.ComponentModel.DataAnnotations.ValidationResult>();
@@ -125,20 +145,48 @@ namespace RealEstateMarketplace.Controllers
             if (savedSearch == null)
                 return NotFound();
 
+            var c = SavedSearchNotificationService.ToCriteria(savedSearch);
             return RedirectToAction(
                 "Index",
                 "Properties",
                 new
                 {
-                    listingType = savedSearch.ListingType,
-                    propertyType = savedSearch.PropertyType,
-                    city = savedSearch.City,
-                    minPrice = savedSearch.MinPrice,
-                    maxPrice = savedSearch.MaxPrice,
-                    minBedrooms = savedSearch.MinBedrooms,
-                    minBathrooms = savedSearch.MinBathrooms,
-                    minSize = savedSearch.MinSizeSquareMeters
+                    listingType = c.ListingType,
+                    propertyType = c.PropertyType,
+                    city = c.City,
+                    minPrice = c.MinPrice,
+                    maxPrice = c.MaxPrice,
+                    minBedrooms = c.MinBedrooms,
+                    minBathrooms = c.MinBathrooms,
+                    minSize = c.MinSize,
+                    maxSize = c.MaxSize,
+                    hasParking = c.HasParking,
+                    furnished = c.Furnished,
+                    lat = c.Lat,
+                    lng = c.Lng,
+                    radiusKm = c.RadiusKm
                 });
+        }
+
+        // POST: /SavedSearches/ToggleEmail/5
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ToggleEmail(int id)
+        {
+            var userId = _userManager.GetUserId(User);
+            var savedSearch = await _context.SavedSearches
+                .FirstOrDefaultAsync(s => s.Id == id && s.UserId == userId);
+            if (savedSearch == null)
+                return NotFound();
+
+            savedSearch.EmailNotificationsEnabled = !savedSearch.EmailNotificationsEnabled;
+            savedSearch.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = savedSearch.EmailNotificationsEnabled
+                ? $"You will get an email when a new property matches \"{savedSearch.Name}\"."
+                : $"Emails for \"{savedSearch.Name}\" are turned off.";
+            return RedirectToAction(nameof(Index));
         }
 
         // POST: /SavedSearches/Delete/5

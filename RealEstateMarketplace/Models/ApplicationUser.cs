@@ -25,5 +25,9 @@ namespace RealEstateMarketplace.Models
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public bool IsActive { get; set; } = true;
+
+        // Optional profile picture (spec §4), e.g. /uploads/profiles/abc.jpg
+        [StringLength(300)]
+        public string? ProfilePicturePath { get; set; }
     }
 }

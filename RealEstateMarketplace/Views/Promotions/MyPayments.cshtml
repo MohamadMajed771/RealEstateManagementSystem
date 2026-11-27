@@ -1,0 +1,45 @@
+@model List<Payment>
+@{ ViewData["Title"] = "My payments"; }
+
+<div class="container py-4">
+    <h2>My promotion payments</h2>
+    @if (Model.Count == 0)
+    {
+        <div class="alert alert-info">No payments yet. Promote an approved listing from <a asp-controller="PropertyListings" asp-action="MyListings">My Listings</a>.</div>
+    }
+    else
+    {
+        <table class="table bg-white align-middle">
+            <thead class="table-light"><tr><th>Date</th><th>Listing</th><th>Plan</th><th>Amount</th><th>Status</th><th>Featured</th><th></th></tr></thead>
+            <tbody>
+            @foreach (var p in Model)
+            {
+                var promo = p.ListingPromotion;
+                <tr>
+                    <td class="small">@p.CreatedAt.ToLocalTime().ToString("g")</td>
+                    <td>@promo.PropertyListing.Title</td>
+                    <td>@promo.PromotionPlan.Name</td>
+                    <td>@p.Amount.ToString("N2") @p.Currency</td>
+                    <td>
+                        <span class="badge @(p.Status switch { PaymentStatus.Succeeded => "bg-success", PaymentStatus.Failed => "bg-danger", _ => "bg-secondary" })">@p.Status</span>
+                        @if (p.Status == PaymentStatus.Failed) { <div class="small text-muted">@p.FailureReason</div> }
+                    </td>
+                    <td class="small">
+                        @if (promo.StartDate != null) { <span>@promo.StartDate?.ToLocalTime().ToString("d") → @promo.EndDate?.ToLocalTime().ToString("d")</span> }
+                    </td>
+                    <td>
+                        @if (p.Status == PaymentStatus.Succeeded)
+                        {
+                            <a asp-action="Receipt" asp-route-id="@p.Id" class="btn btn-sm btn-outline-primary">Receipt</a>
+                        }
+                        else if (p.Status is PaymentStatus.Pending or PaymentStatus.Failed)
+                        {
+                            <a asp-action="Checkout" asp-route-id="@p.Id" class="btn btn-sm btn-outline-success">Pay</a>
+                        }
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    }
+</div>

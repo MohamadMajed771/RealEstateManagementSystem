@@ -17,7 +17,7 @@ namespace RealEstateMarketplace.Data.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.12")
+                .HasAnnotation("ProductVersion", "10.0.15")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -216,6 +216,10 @@ namespace RealEstateMarketplace.Data.Migrations
 
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("bit");
+
+                    b.Property<string>("ProfilePicturePath")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
 
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("nvarchar(max)");
@@ -811,6 +815,18 @@ namespace RealEstateMarketplace.Data.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<bool>("HasBalcony")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("HasGarden")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("HasTerrace")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsFurnished")
+                        .HasColumnType("bit");
+
                     b.Property<decimal?>("Latitude")
                         .HasPrecision(10, 7)
                         .HasColumnType("decimal(10,7)");
@@ -819,9 +835,16 @@ namespace RealEstateMarketplace.Data.Migrations
                         .HasPrecision(10, 7)
                         .HasColumnType("decimal(10,7)");
 
+                    b.Property<string>("OtherFacilities")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
                     b.Property<string>("OwnerId")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
+
+                    b.Property<int?>("ParkingSpaces")
+                        .HasColumnType("int");
 
                     b.Property<decimal>("SizeSquareMeters")
                         .HasPrecision(18, 2)
@@ -914,6 +937,15 @@ namespace RealEstateMarketplace.Data.Migrations
                     b.Property<DateTime?>("ExpiresAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("FeaturedUntil")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("InstallmentMonths")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("InstallmentsAccepted")
+                        .HasColumnType("bit");
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
@@ -930,6 +962,9 @@ namespace RealEstateMarketplace.Data.Migrations
                     b.Property<DateTime?>("PublishedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<int?>("RentalPeriodMonths")
+                        .HasColumnType("int");
+
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
@@ -940,6 +975,9 @@ namespace RealEstateMarketplace.Data.Migrations
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<int>("ViewCount")
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
@@ -1045,9 +1083,18 @@ namespace RealEstateMarketplace.Data.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("AccuracyRating")
+                        .HasColumnType("int");
+
                     b.Property<string>("Comment")
                         .HasMaxLength(2000)
                         .HasColumnType("nvarchar(2000)");
+
+                    b.Property<int?>("CommunicationRating")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("ConditionRating")
+                        .HasColumnType("int");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -1182,11 +1229,23 @@ namespace RealEstateMarketplace.Data.Migrations
                     b.Property<bool>("EmailNotificationsEnabled")
                         .HasColumnType("bit");
 
+                    b.Property<bool?>("Furnished")
+                        .HasColumnType("bit");
+
+                    b.Property<bool?>("HasParking")
+                        .HasColumnType("bit");
+
                     b.Property<bool>("InAppNotificationsEnabled")
                         .HasColumnType("bit");
 
+                    b.Property<double?>("Latitude")
+                        .HasColumnType("float");
+
                     b.Property<int?>("ListingType")
                         .HasColumnType("int");
+
+                    b.Property<double?>("Longitude")
+                        .HasColumnType("float");
 
                     b.Property<decimal?>("MaxPrice")
                         .HasPrecision(18, 2)
@@ -1217,6 +1276,9 @@ namespace RealEstateMarketplace.Data.Migrations
 
                     b.Property<int?>("PropertyType")
                         .HasColumnType("int");
+
+                    b.Property<double?>("RadiusKm")
+                        .HasColumnType("float");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -1322,10 +1384,21 @@ namespace RealEstateMarketplace.Data.Migrations
                     b.Property<DateTime?>("AcknowledgedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CaseNumber")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
                     b.Property<DateTime?>("CompletedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ExternalStatus")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("ExternalStatusUpdatedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<Guid?>("ExternalTransferCaseId")

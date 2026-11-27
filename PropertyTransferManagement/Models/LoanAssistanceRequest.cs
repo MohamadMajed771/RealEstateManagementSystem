@@ -1,4 +1,4 @@
-﻿
+
 using System.ComponentModel.DataAnnotations;
 
 namespace PropertyTransferManagement.Models
@@ -43,6 +43,15 @@ namespace PropertyTransferManagement.Models
         [StringLength(2000)]
         public string? ReviewNotes { get; set; }
 
+        /// <summary>Lender / bank the file was sent to (recorded by the officer).</summary>
+        [StringLength(200)]
+        public string? LenderName { get; set; }
+
+        /// <summary>Decision made by the lender, only recorded here.</summary>
+        public LenderDecision? LenderDecision { get; set; }
+
+        public DateTime? LenderDecisionAt { get; set; }
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public DateTime? ReviewedAt { get; set; }
@@ -71,5 +80,11 @@ namespace PropertyTransferManagement.Models
         Rejected = 5,
         Cancelled = 6,
         Closed = 7
+    }
+
+    public enum LenderDecision
+    {
+        ApprovedByLender = 1,
+        DeclinedByLender = 2
     }
 }

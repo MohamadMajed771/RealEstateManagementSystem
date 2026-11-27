@@ -34,6 +34,22 @@ namespace RealEstateMarketplace.Models
         [StringLength(3, MinimumLength = 3)]
         public string Currency { get; set; } = "USD";
 
+        // Rent: proposed rental period, e.g. 3, 6 or 12 months.
+        [Range(1, 120)]
+        public int? RentalPeriodMonths { get; set; }
+
+        // Sale: installments are only a listing detail (no financing).
+        public bool InstallmentsAccepted { get; set; }
+
+        [Range(1, 360)]
+        public int? InstallmentMonths { get; set; }
+
+        // Number of times the public details page was opened.
+        public int ViewCount { get; set; }
+
+        // Set while a paid promotion is active.
+        public DateTime? FeaturedUntil { get; set; }
+
         // Moderation status
         public ListingStatus Status { get; set; } =
             ListingStatus.PendingApproval;

@@ -8,22 +8,23 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.WebUtilities;
 using RealEstateMarketplace.Models;
+using RealEstateMarketplace.Services.Identity;
 
 namespace RealEstateMarketplace.Areas.Identity.Pages.Account
 {
     public class RegisterModel : PageModel
     {
         private readonly UserManager<ApplicationUser> _userManager;
-        private readonly IEmailSender _emailSender;
+        private readonly EmailVerificationService _verification;
         private readonly ILogger<RegisterModel> _logger;
 
         public RegisterModel(
             UserManager<ApplicationUser> userManager,
-            IEmailSender emailSender,
+            EmailVerificationService verification,
             ILogger<RegisterModel> logger)
         {
             _userManager = userManager;
-            _emailSender = emailSender;
+            _verification = verification;
             _logger = logger;
         }
 
@@ -78,18 +79,42 @@ namespace RealEstateMarketplace.Areas.Identity.Pages.Account
                 return Page();
             }
 
-            var user = new ApplicationUser
+            IdentityResult result;
+            var user = await _userManager.FindByEmailAsync(Input.Email.Trim());
+            if (user != null && !user.EmailConfirmed)
             {
-                UserName = Input.Email.Trim(),
-                Email = Input.Email.Trim(),
-                FirstName = Input.FirstName.Trim(),
-                LastName = Input.LastName.Trim(),
-                CreatedAt = DateTime.UtcNow,
-                IsActive = true
-            };
-
-            var result = await _userManager.CreateAsync(
-                user, Input.Password);
+                // Nobody has proven they own this email yet, so a new sign-up takes
+                // the account over (the code still only goes to the real inbox).
+                // This stops a stranger from blocking an email by registering it first.
+                // The security stamp is kept, so a code already sent to this inbox
+                // (codes are limited to one a minute) still works.
+                user.FirstName = Input.FirstName.Trim();
+                user.LastName = Input.LastName.Trim();
+                result = IdentityResult.Success;
+                foreach (var validator in _userManager.PasswordValidators)
+                {
+                    result = await validator.ValidateAsync(_userManager, user, Input.Password);
+                    if (!result.Succeeded) break;
+                }
+                if (result.Succeeded)
+                {
+                    user.PasswordHash = _userManager.PasswordHasher.HashPassword(user, Input.Password);
+                    result = await _userManager.UpdateAsync(user);
+                }
+            }
+            else
+            {
+                user = new ApplicationUser
+                {
+                    UserName = Input.Email.Trim(),
+                    Email = Input.Email.Trim(),
+                    FirstName = Input.FirstName.Trim(),
+                    LastName = Input.LastName.Trim(),
+                    CreatedAt = DateTime.UtcNow,
+                    IsActive = true
+                };
+                result = await _userManager.CreateAsync(user, Input.Password);
+            }
 
             if (result.Succeeded)
             {
@@ -98,46 +123,13 @@ namespace RealEstateMarketplace.Areas.Identity.Pages.Account
 
                 // No privileged role is assigned during registration.
 
-                var userId = await _userManager.GetUserIdAsync(user);
-
-                var code = await _userManager
-                    .GenerateEmailConfirmationTokenAsync(user);
-
-                code = WebEncoders.Base64UrlEncode(
-                    Encoding.UTF8.GetBytes(code));
-
-                var callbackUrl = Url.Page(
-                    "/Account/ConfirmEmail",
-                    pageHandler: null,
-                    values: new
-                    {
-                        area = "Identity",
-                        userId,
-                        code,
-                        returnUrl
-                    },
-                    protocol: Request.Scheme);
-
-                if (string.IsNullOrEmpty(callbackUrl))
-                {
-                    _logger.LogError(
-                        "Could not generate email confirmation URL.");
-
-                    return RedirectToPage(
-                        "/Account/RegisterConfirmation",
-                        new { email = user.Email });
-                }
-
-                await _emailSender.SendEmailAsync(
-                    user.Email!,
-                    "Confirm your RealEstateMarketplace account",
-                    $"Please confirm your account by " +
-                    $"<a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>" +
-                    "clicking here</a>.");
+                // Spec §2: a verification code is emailed and typed on
+                // the next page; the account is active once it matches.
+                await _verification.SendCodeAsync(user);
 
                 return RedirectToPage(
-                    "/Account/RegisterConfirmation",
-                    new { email = user.Email });
+                    "/Account/VerifyEmail",
+                    new { email = user.Email, sent = true });
             }
 
             foreach (var error in result.Errors)

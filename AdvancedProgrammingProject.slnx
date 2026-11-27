@@ -2,4 +2,6 @@
   <Project Path="PropertyTransferManagement/PropertyTransferManagement.csproj" />
   <Project Path="RealEstateMarketplace/RealEstateMarketplace.csproj" />
   <Project Path="SharedContracts/SharedContracts.csproj" />
+  <Project Path="RealEstate.Tests/RealEstate.Tests.csproj" />
+  <Project Path="PropertyTransfer.Tests/PropertyTransfer.Tests.csproj" />
 </Solution>

@@ -1,116 +1,103 @@
-// Licensed to the .NET Foundation under one or more agreements.
-// The .NET Foundation licenses this file to you under the MIT license.
-
-using System;
 using System.ComponentModel.DataAnnotations;
-using System.Text;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.AspNetCore.WebUtilities;
 using RealEstateMarketplace.Data;
+using RealEstateMarketplace.Services.Identity;
 
 namespace RealEstateMarketplace.Areas.Identity.Pages.Account;
 
+/// <summary>
+/// Step 2 of password recovery: the user enters the emailed code and
+/// the new password twice. Wrong codes count towards account lockout.
+/// </summary>
+[AllowAnonymous]
 public class ResetPasswordModel : PageModel
 {
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly EmailVerificationService _codes;
 
-    public ResetPasswordModel(UserManager<ApplicationUser> userManager)
+    public ResetPasswordModel(UserManager<ApplicationUser> userManager, EmailVerificationService codes)
     {
         _userManager = userManager;
+        _codes = codes;
     }
 
-    /// <summary>
-    ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-    ///     directly from your code. This API may change or be removed in future releases.
-    /// </summary>
     [BindProperty]
-    public InputModel Input { get; set; } = default!;
+    public InputModel Input { get; set; } = new();
 
-    /// <summary>
-    ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-    ///     directly from your code. This API may change or be removed in future releases.
-    /// </summary>
+    public string? Message { get; set; }
+
     public class InputModel
     {
-        /// <summary>
-        ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-        ///     directly from your code. This API may change or be removed in future releases.
-        /// </summary>
         [Required]
         [EmailAddress]
-        public string Email { get; set; } = default!;
+        public string Email { get; set; } = string.Empty;
 
-        /// <summary>
-        ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-        ///     directly from your code. This API may change or be removed in future releases.
-        /// </summary>
+        [Required]
+        [Display(Name = "6-digit code")]
+        public string Code { get; set; } = string.Empty;
+
         [Required]
         [StringLength(100, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.", MinimumLength = 6)]
         [DataType(DataType.Password)]
-        public string Password { get; set; } = default!;
+        [Display(Name = "New password")]
+        public string Password { get; set; } = string.Empty;
 
-        /// <summary>
-        ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-        ///     directly from your code. This API may change or be removed in future releases.
-        /// </summary>
         [DataType(DataType.Password)]
-        [Display(Name = "Confirm password")]
+        [Display(Name = "Confirm new password")]
         [Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
         public string? ConfirmPassword { get; set; }
-
-        /// <summary>
-        ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-        ///     directly from your code. This API may change or be removed in future releases.
-        /// </summary>
-        [Required]
-        public string Code { get; set; } = default!;
-
     }
 
-    public IActionResult OnGet(string? code = null)
+    public void OnGet(bool resent = false)
     {
-        if (code == null)
-        {
-            return BadRequest("A code must be supplied for password reset.");
-        }
-        else
-        {
-            Input = new InputModel
-            {
-                Code = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(code))
-            };
-            return Page();
-        }
+        Input.Email = TempData["ResetEmail"] as string ?? string.Empty;
+        Message = resent
+            ? "If the account exists, a new code was sent (at most one per minute)."
+            : "If an account exists for this email, we sent it a 6-digit code.";
     }
 
     public async Task<IActionResult> OnPostAsync()
     {
         if (!ModelState.IsValid)
+            return Page();
+
+        var user = await _userManager.FindByEmailAsync(Input.Email);
+        if (user == null || !await _userManager.IsEmailConfirmedAsync(user))
         {
+            // Same answer as a wrong code: do not reveal whether the account exists.
+            ModelState.AddModelError(string.Empty, "The code is incorrect or has expired. Try again or request a new code.");
             return Page();
         }
 
-        var user = await _userManager.FindByEmailAsync(Input.Email);
-        if (user == null)
+        var (result, errors) = await _codes.ResetPasswordAsync(user, Input.Code, Input.Password);
+        switch (result)
         {
-            // Don't reveal that the user does not exist
-            return RedirectToPage("./ResetPasswordConfirmation");
-        }
+            case VerifyResult.Verified:
+                return RedirectToPage("./ResetPasswordConfirmation");
 
-        var result = await _userManager.ResetPasswordAsync(user, Input.Code, Input.Password);
-        if (result.Succeeded)
-        {
-            return RedirectToPage("./ResetPasswordConfirmation");
-        }
+            case VerifyResult.LockedOut:
+                ModelState.AddModelError(string.Empty, "Too many wrong codes. Please try again later.");
+                return Page();
 
-        foreach (var error in result.Errors)
-        {
-            ModelState.AddModelError(string.Empty, error.Description);
+            default:
+                if (errors.Any())
+                    foreach (var e in errors) ModelState.AddModelError(string.Empty, e.Description);
+                else
+                    ModelState.AddModelError(string.Empty, "The code is incorrect or has expired. Try again or request a new code.");
+                return Page();
         }
-        return Page();
+    }
+
+    public async Task<IActionResult> OnPostResendAsync()
+    {
+        var user = string.IsNullOrWhiteSpace(Input.Email) ? null : await _userManager.FindByEmailAsync(Input.Email);
+        if (user != null && await _userManager.IsEmailConfirmedAsync(user))
+            await _codes.SendResetCodeAsync(user);
+
+        TempData["ResetEmail"] = Input.Email;
+        return RedirectToPage(new { resent = true });
     }
 }

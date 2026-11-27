@@ -50,7 +50,7 @@
         </span>
 
         <span class="badge bg-secondary">
-            @Model.Count() Total
+            @(Model.Count() >= 50 ? "Latest 50 shown" : Model.Count() + " Total")
         </span>
     </div>
 

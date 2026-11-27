@@ -97,6 +97,8 @@ namespace RealEstateMarketplace.Controllers
                 IsDeleted = false
             };
 
+            ListingExtraFields.CopyTo(model, property, listing);
+
             var uploadedPaths = new List<string>();
 
             try
@@ -233,6 +235,8 @@ namespace RealEstateMarketplace.Controllers
             model.CoverPhotoId = model.ExistingPhotos
                 .FirstOrDefault(p => p.IsCoverPhoto)?.Id;
 
+            ListingExtraFields.CopyFrom(model, listing.Property, listing);
+
             return View(model);
         }
 
@@ -337,6 +341,8 @@ namespace RealEstateMarketplace.Controllers
             listing.Price = model.Price!.Value;
             listing.Currency =
                 model.Currency.Trim().ToUpperInvariant();
+
+            ListingExtraFields.CopyTo(model, listing.Property, listing);
 
             // Editing requires moderation again.
             listing.Status = ListingStatus.PendingApproval;

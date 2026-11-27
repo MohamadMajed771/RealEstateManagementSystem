@@ -100,6 +100,22 @@ namespace PropertyTransferManagement.Data
                 }
             }
 
+            // Unique human-readable case number
+            builder.Entity<TransferCase>()
+                .HasIndex(c => c.CaseNumber)
+                .IsUnique();
+
+            builder.Entity<TransferCase>()
+                .Property(c => c.SizeSquareMeters)
+                .HasPrecision(18, 2);
+
+            // Current officer of the case
+            builder.Entity<TransferCase>()
+                .HasOne(c => c.AssignedOfficer)
+                .WithMany()
+                .HasForeignKey(c => c.AssignedOfficerId)
+                .OnDelete(DeleteBehavior.NoAction);
+
             // One transfer case per marketplace transfer request
             builder.Entity<TransferCase>()
                 .HasIndex(c => c.MarketplaceTransferRequestId)

@@ -146,7 +146,7 @@ namespace RealEstateMarketplace.Areas.Admin.Controllers
             try
             {
                 await _savedSearchService.NotifyMatchingUsersAsync(
-                    listing.Id);
+                    listing.Id, $"{Request.Scheme}://{Request.Host}");
             }
             catch (Exception)
             {

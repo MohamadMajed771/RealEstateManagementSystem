@@ -61,6 +61,10 @@ namespace RealEstateMarketplace.Controllers
                 .Include(l => l.Property)
                 .FirstOrDefaultAsync(l =>
                     l.Id == propertyListingId &&
+                    // Same rule as the public listing page: hidden listings cannot be discussed.
+                    (l.Status == ListingStatus.Approved ||
+                     l.Status == ListingStatus.Sold ||
+                     l.Status == ListingStatus.Rented) &&
                     !l.IsDeleted);
 
             if (listing == null)
@@ -76,7 +80,7 @@ namespace RealEstateMarketplace.Controllers
                 return RedirectToAction(
                     "Details",
                     "Properties",
-                    new { id = listing.PropertyId });
+                    new { id = listing.Id });
             }
 
             // Reuse an existing conversation between

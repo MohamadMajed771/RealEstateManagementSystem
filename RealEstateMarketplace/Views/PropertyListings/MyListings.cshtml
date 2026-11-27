@@ -1,4 +1,4 @@
-﻿
+
 @model IEnumerable<RealEstateMarketplace.Models.PropertyListing>
 
 @using RealEstateMarketplace.Models
@@ -22,6 +22,11 @@
             + Add New Property
         </a>
     </div>
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
+    }
 
     @if (TempData["SuccessMessage"] != null)
     {
@@ -133,7 +138,14 @@
                             </td>
 
                             <!-- STATUS -->
-                            <td>@listing.Status</td>
+                            <td>
+                                @listing.Status
+                                @if (listing.FeaturedUntil != null && listing.FeaturedUntil > DateTime.UtcNow)
+                                {
+                                    <div><span class="badge bg-warning text-dark">★ Featured until @listing.FeaturedUntil.Value.ToLocalTime().ToString("d")</span></div>
+                                }
+                                <div class="small text-muted">@listing.ViewCount views</div>
+                            </td>
 
                             <!-- CREATED DATE -->
                             <td>
@@ -150,6 +162,16 @@
                                        class="btn btn-sm btn-outline-primary">
                                         Edit
                                     </a>
+
+                                    @if (listing.Status == ListingStatus.Approved)
+                                    {
+                                        <a asp-controller="Promotions"
+                                           asp-action="Promote"
+                                           asp-route-listingId="@listing.Id"
+                                           class="btn btn-sm btn-warning">
+                                            ★ Promote
+                                        </a>
+                                    }
 
                                     <form asp-controller="PropertyListings"
                                           asp-action="Delete"

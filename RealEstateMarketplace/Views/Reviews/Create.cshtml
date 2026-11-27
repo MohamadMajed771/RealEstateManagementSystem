@@ -1,0 +1,58 @@
+@model RealEstateMarketplace.Controllers.ReviewFormViewModel
+@{
+    ViewData["Title"] = "Leave a review";
+    var detail = new (string Field, string Label)[]
+    {
+        (nameof(Model.AccuracyRating), "Accuracy of the description"),
+        (nameof(Model.ConditionRating), "Property condition"),
+        (nameof(Model.CommunicationRating), (Model.IsRent ? "Communication with the landlord" : "Communication with the seller"))
+    };
+}
+
+<div class="container py-4" style="max-width:720px">
+    <h2>Leave a review</h2>
+    <p class="text-muted">
+        @(Model.IsRent ? "Rental" : "Purchase") of <strong>@Model.PropertyTitle</strong> from @Model.OwnerName.
+        Your review appears on the property page with your first name.
+    </p>
+
+    <form asp-action="Create" method="post" class="card card-body shadow-sm">
+        <input type="hidden" asp-for="TransactionId" />
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+        <label class="form-label fw-semibold">Overall experience *</label>
+        <div class="mb-3">
+            @for (int i = 1; i <= 5; i++)
+            {
+                <input type="radio" class="btn-check" name="Rating" id="overall-@i" value="@i" checked="@(Model.Rating == i)" required />
+                <label class="btn btn-outline-warning me-1" for="overall-@i">@i ★</label>
+            }
+            <span asp-validation-for="Rating" class="text-danger d-block"></span>
+        </div>
+
+        <div class="row g-3 mb-3">
+            @foreach (var (field, label) in detail)
+            {
+                <div class="col-md-4">
+                    <label class="form-label small" for="@field">@label</label>
+                    <select class="form-select form-select-sm" id="@field" name="@field">
+                        <option value="">Not rated</option>
+                        @for (int i = 5; i >= 1; i--) { <option value="@i">@i ★</option> }
+                    </select>
+                </div>
+            }
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="Comment" class="form-label"></label>
+            <textarea asp-for="Comment" class="form-control" rows="5" maxlength="2000"
+                      placeholder="Was the listing accurate? What was the condition like? How was the communication?"></textarea>
+            <span asp-validation-for="Comment" class="text-danger"></span>
+        </div>
+
+        <div class="d-flex gap-2">
+            <button class="btn btn-primary">Publish review</button>
+            <a asp-controller="Transactions" asp-action="MyTransactions" class="btn btn-outline-secondary">Cancel</a>
+        </div>
+    </form>
+</div>

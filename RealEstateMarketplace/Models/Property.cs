@@ -46,6 +46,21 @@ namespace RealEstateMarketplace.Models
         [Range(-180, 180)]
         public decimal? Longitude { get; set; }
 
+        // Facilities (spec section 5, step 4)
+        [Range(0, 100)]
+        public int? ParkingSpaces { get; set; }
+
+        public bool IsFurnished { get; set; }
+
+        public bool HasBalcony { get; set; }
+
+        public bool HasGarden { get; set; }
+
+        public bool HasTerrace { get; set; }
+
+        [StringLength(500)]
+        public string? OtherFacilities { get; set; }
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public DateTime? UpdatedAt { get; set; }

@@ -1,4 +1,4 @@
-﻿
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -30,7 +30,7 @@
           href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
 </head>
 
-<body>
+<body data-signed-in="@(User.Identity?.IsAuthenticated == true ? "1" : "")">
 
     <header>
 
@@ -84,6 +84,16 @@
                             </a>
                         </li>
 
+                        <!-- AI SEARCH -->
+                        <li class="nav-item">
+                            <a class="nav-link text-dark"
+                               asp-area=""
+                               asp-controller="AiSearch"
+                               asp-action="Index">
+                                <i class="bi bi-stars me-1 text-primary"></i>AI Search
+                            </a>
+                        </li>
+
                         @if (User.Identity?.IsAuthenticated == true)
                         {
                             <!-- INCOMING REQUESTS -->
@@ -108,6 +118,15 @@
 
                                     <i class="bi bi-chat-dots me-1"></i>
                                     My Messages
+                                </a>
+                            </li>
+                        }
+
+                        @if (User.IsInRole("Admin"))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link fw-semibold text-danger" href="~/Admin/Dashboard">
+                                    Admin
                                 </a>
                             </li>
                         }
@@ -179,6 +198,11 @@
 
     <script src="~/js/site.js"
             asp-append-version="true"></script>
+    @if (User.Identity?.IsAuthenticated == true)
+    {
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
+        <script src="~/js/live-notifications.js" asp-append-version="true"></script>
+    }
 
     @await RenderSectionAsync("Scripts", required: false)
 

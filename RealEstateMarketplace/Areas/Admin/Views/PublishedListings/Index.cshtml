@@ -1,0 +1,86 @@
+@model List<PropertyListing>
+@{
+    ViewData["Title"] = "All listings";
+    ListingStatus? status = ViewBag.Status;
+    string? q = ViewBag.Query;
+    bool removed = ViewBag.Removed == true;
+    var reportCounts = ViewBag.ReportCounts as Dictionary<int, int> ?? new();
+}
+
+<div class="container-xl py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="mb-0">All listings</h2>
+        <div class="d-flex gap-2">
+            <a class="btn btn-sm btn-outline-success" href="~/Admin/Export/Listings?status=@status&format=xlsx">Excel</a>
+            <a class="btn btn-sm btn-outline-danger" href="~/Admin/Export/Listings?status=@status&format=pdf">PDF</a>
+        </div>
+    </div>
+    <partial name="_AdminAlerts" />
+
+    <form method="get" class="row g-2 mb-3">
+        <div class="col-md-4"><input name="q" value="@q" class="form-control" placeholder="Title, city or owner email" /></div>
+        <div class="col-md-3">
+            <select name="status" class="form-select">
+                <option value="">Any status</option>
+                @foreach (var s in Enum.GetValues<ListingStatus>())
+                {
+                    <option value="@s" selected="@(status == s)">@s</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-3 d-flex align-items-center">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="removed" value="true" id="removed" checked="@removed" />
+                <label class="form-check-label" for="removed">Show removed listings</label>
+            </div>
+        </div>
+        <div class="col-md-2"><button class="btn btn-primary w-100">Filter</button></div>
+    </form>
+
+    <div class="table-responsive">
+        <table class="table bg-white align-middle">
+            <thead class="table-light">
+                <tr><th>#</th><th>Listing</th><th>Owner</th><th>Price</th><th>Status</th><th class="text-center">Views</th><th class="text-center">Reports</th><th class="text-end">Moderation</th></tr>
+            </thead>
+            <tbody>
+            @foreach (var l in Model)
+            {
+                <tr>
+                    <td>@l.Id</td>
+                    <td>
+                        <a target="_blank" href="~/Properties/Details/@l.Id" class="fw-semibold">@l.Title</a>
+                        <div class="small text-muted">@l.ListingType · @l.Property.Type · @l.Property.City</div>
+                    </td>
+                    <td class="small">@l.Property.Owner.Email</td>
+                    <td class="text-nowrap">@l.Price.ToString("N0") @l.Currency</td>
+                    <td>
+                        <span class="badge bg-secondary">@(l.IsDeleted ? "Removed" : l.Status.ToString())</span>
+                        @if (l.FeaturedUntil > DateTime.UtcNow) { <span class="badge bg-warning text-dark">Featured</span> }
+                    </td>
+                    <td class="text-center">@l.ViewCount</td>
+                    <td class="text-center">
+                        @if (reportCounts.TryGetValue(l.Id, out var n)) { <a href="~/Admin/Reports?showClosed=true" class="badge bg-danger text-decoration-none">@n</a> } else { <span>0</span> }
+                    </td>
+                    <td class="text-end">
+                        @if (l.IsDeleted || l.Status == ListingStatus.Archived)
+                        {
+                            <form asp-action="Restore" asp-route-id="@l.Id" method="post">
+                                <button class="btn btn-sm btn-outline-success">Restore</button>
+                            </form>
+                        }
+                        else
+                        {
+                            <form method="post" class="d-inline-flex gap-1">
+                                <input name="reason" class="form-control form-control-sm" style="width:170px" placeholder="Reason" required />
+                                <button asp-action="Hide" asp-route-id="@l.Id" class="btn btn-sm btn-outline-warning">Hide</button>
+                                <button asp-action="Remove" asp-route-id="@l.Id" class="btn btn-sm btn-outline-danger"
+                                        onclick="return confirm('Remove this listing?');">Remove</button>
+                            </form>
+                        }
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</div>

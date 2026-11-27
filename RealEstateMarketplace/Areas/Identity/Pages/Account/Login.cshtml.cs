@@ -170,6 +170,22 @@ public class LoginModel : PageModel
                     });
             }
 
+            if (result.IsNotAllowed)
+            {
+                // Identity answers "not allowed" before it checks the password, so
+                // check it here: only the right password learns the email is unverified.
+                var unverified = await _userManager.FindByEmailAsync(Input.Email);
+                if (unverified != null &&
+                    await _userManager.CheckPasswordAsync(unverified, Input.Password))
+                {
+                    // Email not verified yet: go to the code page
+                    return RedirectToPage("./VerifyEmail", new { email = Input.Email });
+                }
+
+                if (unverified != null)
+                    await _userManager.AccessFailedAsync(unverified); // still counts toward lockout
+            }
+
             if (result.IsLockedOut)
             {
                 _logger.LogWarning("User account locked out.");

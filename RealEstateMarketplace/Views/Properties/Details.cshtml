@@ -1,4 +1,4 @@
-﻿
+
 @using System.Security.Claims
 @using System.Globalization
 @using RealEstateMarketplace.Models
@@ -29,6 +29,8 @@
         currentUserId == Model.SellerId;
 
     var isFavorite = ViewBag.IsFavorite == true;
+
+    var isClosed = Model.Status != ListingStatus.Approved;
 }
 
 <div class="container py-4">
@@ -60,6 +62,14 @@
        class="btn btn-outline-secondary mb-4">
         &larr; @backText
     </a>
+
+    @if (isClosed)
+    {
+        <div class="alert alert-secondary">
+            This property has been @(Model.Status == ListingStatus.Rented ? "rented" : "sold")
+            and is no longer available. The page stays visible for its verified reviews.
+        </div>
+    }
 
     <!-- Success Messages -->
     @if (TempData["Success"] != null)
@@ -242,6 +252,47 @@
                             </div>
                         }
 
+                        <div class="col-sm-6">
+                            <strong>Parking:</strong>
+                            @(Model.ParkingSpaces > 0 ? $"{Model.ParkingSpaces} space(s)" : "None")
+                        </div>
+
+                        <div class="col-sm-6">
+                            <strong>Furnished:</strong>
+                            @(Model.IsFurnished ? "Yes" : "No")
+                        </div>
+
+                        @{
+                            var facilities = new List<string>();
+                            if (Model.HasBalcony) facilities.Add("Balcony");
+                            if (Model.HasGarden) facilities.Add("Garden");
+                            if (Model.HasTerrace) facilities.Add("Terrace");
+                            if (!string.IsNullOrWhiteSpace(Model.OtherFacilities)) facilities.Add(Model.OtherFacilities);
+                        }
+                        @if (facilities.Count > 0)
+                        {
+                            <div class="col-12">
+                                <strong>Facilities:</strong>
+                                @string.Join(", ", facilities)
+                            </div>
+                        }
+
+                        @if (!isSale)
+                        {
+                            <div class="col-sm-6">
+                                <strong>Rental period:</strong>
+                                @(Model.RentalPeriodMonths.HasValue ? $"{Model.RentalPeriodMonths} months" : "Flexible")
+                            </div>
+                        }
+                        else if (Model.InstallmentsAccepted)
+                        {
+                            <div class="col-12">
+                                <strong>Installments:</strong>
+                                Accepted@(Model.InstallmentMonths.HasValue ? $" over {Model.InstallmentMonths} months" : "")
+                                <span class="text-muted small">(agreed with the owner; the marketplace does not provide financing)</span>
+                            </div>
+                        }
+
                     </div>
                 </div>
             </div>
@@ -258,6 +309,54 @@
                         @Model.Description
                     </p>
 
+                </div>
+            </div>
+
+            <!-- Reviews -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <h4 class="fw-bold mb-3">
+                        Reviews
+                        @if (Model.AverageRating.HasValue)
+                        {
+                            <span class="fs-6 text-warning ms-2">★ @Model.AverageRating.Value.ToString("F1")</span>
+                            <span class="fs-6 text-muted">(@Model.Reviews.Count)</span>
+                        }
+                    </h4>
+
+                    @if (Model.Reviews.Count == 0)
+                    {
+                        <p class="text-muted mb-0">
+                            No reviews yet. Only people who completed a sale or rental of this
+                            property through the marketplace can review it.
+                        </p>
+                    }
+                    else
+                    {
+                        @foreach (var review in Model.Reviews)
+                        {
+                            <div class="border-bottom pb-2 mb-2">
+                                <div class="d-flex justify-content-between">
+                                    <strong>@review.ReviewerName
+                                        <span class="badge bg-light text-muted border fw-normal ms-1">
+                                            Verified @(review.IsRental ? "tenant" : "buyer")
+                                        </span>
+                                    </strong>
+                                    <span class="text-warning">@(new string('★', review.Rating))@(new string('☆', 5 - review.Rating))</span>
+                                </div>
+                                <div class="small text-muted">
+                                    @if (review.AccuracyRating.HasValue) { <span class="me-3">Accuracy @review.AccuracyRating/5</span> }
+                                    @if (review.ConditionRating.HasValue) { <span class="me-3">Condition @review.ConditionRating/5</span> }
+                                    @if (review.CommunicationRating.HasValue) { <span>Communication @review.CommunicationRating/5</span> }
+                                </div>
+                                @if (!string.IsNullOrWhiteSpace(review.Comment))
+                                {
+                                    <div style="white-space:pre-line">@review.Comment</div>
+                                }
+                                <div class="small text-muted">@review.CreatedAt.ToLocalTime().ToString("d")</div>
+                            </div>
+                        }
+                    }
                 </div>
             </div>
 
@@ -311,9 +410,17 @@
                         Seller Information
                     </h4>
 
-                    <p>
-                        <strong>Seller:</strong>
+                    <p class="mb-1">
+                        <strong>Owner:</strong>
                         @Model.SellerName
+                    </p>
+                    <p class="small text-muted mb-1">
+                        Member since @Model.SellerMemberSince.ToLocalTime().ToString("MMMM yyyy")
+                        · @Model.SellerPublishedListings published listing(s)
+                    </p>
+                    <p class="small text-muted">
+                        @Model.ViewCount view(s)
+                        @if (Model.IsFeatured) { <span class="badge bg-warning text-dark ms-1">★ Featured</span> }
                     </p>
 
                     <hr />
@@ -364,7 +471,13 @@
                     }
 
                     <!-- OWNER ACTIONS -->
-                    @if (isOwner)
+                    @if (isClosed)
+                    {
+                        <p class="text-muted mt-3 mb-0">
+                            @(Model.Status == ListingStatus.Rented ? "Rented" : "Sold") through RealEstateMarketplace.
+                        </p>
+                    }
+                    else if (isOwner)
                     {
                         <a asp-controller="PropertyListings"
                            asp-action="Edit"
@@ -437,6 +550,14 @@
                             Contact the property owner directly to ask
                             questions or negotiate the price.
                         </p>
+
+                        <!-- REPORT PROPERTY -->
+                        <button type="button"
+                                class="btn btn-link text-danger w-100 mt-3"
+                                data-bs-toggle="modal"
+                                data-bs-target="#reportModal">
+                            Report this property
+                        </button>
                     }
                     else
                     {
@@ -474,6 +595,40 @@
 
     </div>
 </div>
+
+@if (isAuthenticated && !isOwner)
+{
+    <div class="modal fade" id="reportModal" tabindex="-1" aria-labelledby="reportModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <form class="modal-content" asp-controller="PropertyReports" asp-action="Create" method="post">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="reportModalLabel">Report this property</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="propertyListingId" value="@Model.Id" />
+                    <label class="form-label">Reason</label>
+                    <select name="reason" class="form-select mb-3" required>
+                        <option value="@PropertyReportReason.IncorrectInformation">Incorrect information</option>
+                        <option value="@PropertyReportReason.FakePhotos">Misleading photos</option>
+                        <option value="@PropertyReportReason.FraudOrScam">Suspicious listing / scam</option>
+                        <option value="@PropertyReportReason.DuplicateListing">Duplicate listing</option>
+                        <option value="@PropertyReportReason.InappropriateContent">Inappropriate content</option>
+                        <option value="@PropertyReportReason.SuspiciousSeller">Suspicious owner</option>
+                        <option value="@PropertyReportReason.Other">Other</option>
+                    </select>
+                    <label class="form-label">Explanation</label>
+                    <textarea name="description" class="form-control" rows="4" minlength="10" maxlength="2000" required
+                              placeholder="What does not match the listing?"></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Send report</button>
+                </div>
+            </form>
+        </div>
+    </div>
+}
 
 <!-- Leaflet / OpenStreetMap -->
 @if (Model.Latitude.HasValue && Model.Longitude.HasValue)

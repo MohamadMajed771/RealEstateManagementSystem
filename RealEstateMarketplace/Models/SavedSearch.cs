@@ -55,6 +55,21 @@ namespace RealEstateMarketplace.Models
         [Range(0, 1000)]
         public int? MinBathrooms { get; set; }
 
+        // Extra filters (spec §11: "within a selected geographic area")
+        public bool? HasParking { get; set; }
+
+        public bool? Furnished { get; set; }
+
+        // Point chosen on the map + distance around it
+        [Range(-90, 90)]
+        public double? Latitude { get; set; }
+
+        [Range(-180, 180)]
+        public double? Longitude { get; set; }
+
+        [Range(0.1, 500)]
+        public double? RadiusKm { get; set; }
+
         // Notification preferences
         public bool EmailNotificationsEnabled { get; set; } = false;
 

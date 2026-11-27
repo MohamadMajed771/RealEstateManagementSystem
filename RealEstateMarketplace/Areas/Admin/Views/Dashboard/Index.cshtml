@@ -1,5 +1,10 @@
-﻿@{
+@model AdminDashboardViewModel
+@using System.Text.Json
+@{
     ViewData["Title"] = "Admin Dashboard";
+    string Json(object o) => JsonSerializer.Serialize(o);
+    string Labels(List<ChartPoint> p) => Json(p.Select(x => x.Label));
+    string Values(List<ChartPoint> p) => Json(p.Select(x => x.Value));
 }
 
 <style>
@@ -91,7 +96,40 @@
         cursor: default;
     }
 
+    .chart-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 20px;
+        margin-top: 25px;
+    }
+
+    .chart-card {
+        background: white;
+        padding: 20px;
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+    }
+
+    .chart-card h2 {
+        font-size: 16px;
+        margin: 0 0 12px;
+    }
+
+    .chart-card canvas {
+        max-height: 280px;
+    }
+
+    .admin-card .sub {
+        font-size: 13px;
+        color: #64748b;
+        margin-top: 4px;
+    }
+
     @@media (max-width: 850px) {
+        .chart-grid {
+            grid-template-columns: 1fr;
+        }
+
         .admin-grid {
             grid-template-columns: repeat(2, minmax(0, 1fr));
         }
@@ -112,60 +150,132 @@
     </div>
 
     <div class="admin-grid">
-
         <div class="admin-card" style="--accent:#2563eb">
             <h3>Total Users</h3>
-            <div class="number">@ViewBag.TotalUsers</div>
+            <div class="number">@Model.TotalUsers</div>
+            <div class="sub">+@Model.NewUsersThisMonth this month</div>
         </div>
-
         <div class="admin-card" style="--accent:#64748b">
             <h3>Total Listings</h3>
-            <div class="number">@ViewBag.TotalListings</div>
+            <div class="number">@Model.TotalListings</div>
+            <div class="sub">@Model.ApprovedListings published (@Model.PublishedForSale for sale · @Model.PublishedForRent for rent) · @Model.RejectedListings rejected</div>
         </div>
-
         <div class="admin-card" style="--accent:#f59e0b">
             <h3>Pending Approval</h3>
-            <div class="number">@ViewBag.PendingListings</div>
+            <div class="number">@Model.PendingListings</div>
+            <div class="sub"><a href="~/Admin/Listings">Review now</a></div>
         </div>
-
-        <div class="admin-card" style="--accent:#16a34a">
-            <h3>Approved Listings</h3>
-            <div class="number">@ViewBag.ApprovedListings</div>
-        </div>
-
         <div class="admin-card" style="--accent:#dc2626">
-            <h3>Rejected Listings</h3>
-            <div class="number">@ViewBag.RejectedListings</div>
+            <h3>Open Reports</h3>
+            <div class="number">@Model.OpenReports</div>
+            <div class="sub">@Model.TotalReports in total · <a href="~/Admin/Reports">investigate</a></div>
         </div>
-
+        <div class="admin-card" style="--accent:#16a34a">
+            <h3>Completed Transactions</h3>
+            <div class="number">@Model.CompletedTransactions</div>
+            <div class="sub">Sales volume @Model.SalesVolume.ToString("N0") USD</div>
+        </div>
         <div class="admin-card" style="--accent:#7c3aed">
-            <h3>Property Reports</h3>
-            <div class="number">@ViewBag.TotalReports</div>
+            <h3>Promotion Revenue</h3>
+            <div class="number">@Model.PromotionRevenue.ToString("N2")</div>
+            <div class="sub">@Model.ActivePromotions promotions running</div>
         </div>
+    </div>
 
+    <div class="chart-grid">
+        <div class="chart-card"><h2>New listings (last 12 months)</h2><canvas id="listingsChart"></canvas></div>
+        <div class="chart-card"><h2>New users (last 12 months)</h2><canvas id="usersChart"></canvas></div>
+        <div class="chart-card"><h2>Listings by status</h2><canvas id="statusChart"></canvas></div>
+        <div class="chart-card"><h2>Promotion revenue, USD (last 12 months)</h2><canvas id="revenueChart"></canvas></div>
+        <div class="chart-card"><h2>Published listings by city (top 8)</h2><canvas id="cityChart"></canvas></div>
+        <div class="chart-card"><h2>Listings by property type</h2><canvas id="typeChart"></canvas></div>
+        <div class="chart-card"><h2>Reports by reason</h2><canvas id="reasonChart"></canvas></div>
+    </div>
+
+    <div class="chart-card" style="margin-bottom:24px">
+        <h2>Most viewed properties</h2>
+        @if (Model.MostViewed.Count == 0)
+        {
+            <p class="text-muted mb-0">No views recorded yet.</p>
+        }
+        else
+        {
+            <table class="table table-sm mb-0">
+                <thead><tr><th>#</th><th>Property</th><th>City</th><th class="text-end">Views</th></tr></thead>
+                <tbody>
+                    @foreach (var m in Model.MostViewed)
+                    {
+                        <tr>
+                            <td>@m.Id</td>
+                            <td><a href="~/Properties/Details/@m.Id" target="_blank">@m.Title</a></td>
+                            <td>@m.City</td>
+                            <td class="text-end">@m.Views</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
     </div>
 
     <div class="admin-actions">
         <h2>Quick Actions</h2>
-
         <div class="admin-action-grid">
+            <a class="admin-action" asp-area="Admin" asp-controller="Listings" asp-action="Index">Review Property Listings</a>
+            <a class="admin-action" asp-area="Admin" asp-controller="Reports" asp-action="Index">Property Reports</a>
+            <a class="admin-action" asp-area="Admin" asp-controller="Users" asp-action="Index">Manage Users</a>
+            <a class="admin-action" asp-area="Admin" asp-controller="Reviews" asp-action="Index">Reviews</a>
+            <a class="admin-action" asp-area="Admin" asp-controller="Payments" asp-action="Index">Promotion Payments</a>
+        </div>
 
-            <a class="admin-action"
-               asp-area="Admin"
-               asp-controller="Listings"
-               asp-action="Index">
-                Review Property Listings
-            </a>
-
-
-            <span class="admin-action disabled">
-                Manage Users — Coming Soon
-            </span>
-
-            <span class="admin-action disabled">
-                Property Reports — Coming Soon
-            </span>
+        <h2 style="margin-top:24px">Export</h2>
+        <div class="admin-action-grid">
+            @foreach (var (name, label) in new[] { ("Listings", "Listings"), ("Users", "Users"), ("Reports", "Reports"), ("Transactions", "Transactions"), ("Payments", "Payments") })
+            {
+                <span class="admin-action" style="background:#f8fafc;color:#142b49">
+                    @label:
+                    <a href="~/Admin/Export/@name?format=xlsx">Excel</a> ·
+                    <a href="~/Admin/Export/@name?format=pdf">PDF</a>
+                </span>
+            }
         </div>
     </div>
 
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+    (function () {
+        const palette = ['#2563eb', '#16a34a', '#f59e0b', '#dc2626', '#7c3aed', '#0891b2', '#db2777', '#64748b'];
+        const noLegend = { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } };
+
+        function bar(id, labels, data, color, horizontal) {
+            new Chart(document.getElementById(id), {
+                type: 'bar',
+                data: { labels, datasets: [{ data, backgroundColor: color || palette[0], borderRadius: 4 }] },
+                options: Object.assign({ indexAxis: horizontal ? 'y' : 'x' }, noLegend)
+            });
+        }
+        function line(id, labels, data, color) {
+            new Chart(document.getElementById(id), {
+                type: 'line',
+                data: { labels, datasets: [{ data, borderColor: color, backgroundColor: color + '33', fill: true, tension: 0.3 }] },
+                options: noLegend
+            });
+        }
+        function doughnut(id, labels, data) {
+            new Chart(document.getElementById(id), {
+                type: 'doughnut',
+                data: { labels, datasets: [{ data, backgroundColor: palette }] },
+                options: { plugins: { legend: { position: 'right' } } }
+            });
+        }
+
+        bar('listingsChart', @Html.Raw(Labels(Model.ListingsPerMonth)), @Html.Raw(Values(Model.ListingsPerMonth)), '#2563eb');
+        line('usersChart', @Html.Raw(Labels(Model.UsersPerMonth)), @Html.Raw(Values(Model.UsersPerMonth)), '#16a34a');
+        doughnut('statusChart', @Html.Raw(Labels(Model.ListingsByStatus)), @Html.Raw(Values(Model.ListingsByStatus)));
+        line('revenueChart', @Html.Raw(Labels(Model.RevenuePerMonth)), @Html.Raw(Values(Model.RevenuePerMonth)), '#7c3aed');
+        bar('cityChart', @Html.Raw(Labels(Model.ListingsByCity)), @Html.Raw(Values(Model.ListingsByCity)), '#0891b2', true);
+        doughnut('typeChart', @Html.Raw(Labels(Model.ListingsByType)), @Html.Raw(Values(Model.ListingsByType)));
+        bar('reasonChart', @Html.Raw(Labels(Model.ReportsByReason)), @Html.Raw(Values(Model.ReportsByReason)), '#dc2626', true);
+    })();
+</script>

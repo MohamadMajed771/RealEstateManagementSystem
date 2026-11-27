@@ -7,8 +7,13 @@ using RealEstateMarketplace.Data;
 using RealEstateMarketplace.Hubs;
 using RealEstateMarketplace.Models;
 using RealEstateMarketplace.Services;
+using RealEstateMarketplace.Services.Messaging;
+using SharedContracts.Messaging;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// QuestPDF Community licence (free for students / small organisations)
+QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 
 // ==========================================
 // APPLICATION SERVICES
@@ -16,7 +21,47 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddScoped<SavedSearchNotificationService>();
 
-builder.Services.AddSingleton<RabbitMqConnectionService>();
+builder.Services.AddScoped<PropertySearchService>();
+builder.Services.AddScoped<UserModerationService>();
+builder.Services.AddMemoryCache();
+
+// AI search: free OpenAI-compatible endpoint (Gemini free tier / Ollama),
+// falls back to the built-in rule-based parser when not configured.
+builder.Services.Configure<RealEstateMarketplace.Services.AiSearch.AiSearchOptions>(
+    builder.Configuration.GetSection("AiSearch"));
+builder.Services.AddHttpClient<RealEstateMarketplace.Services.AiSearch.AiSearchService>();
+
+// 10 AI searches per minute per user / IP
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("ai-search", context =>
+        System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
+            context.User.Identity?.Name ?? context.Connection.RemoteIpAddress?.ToString() ?? "anonymous",
+            _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(1)
+            }));
+});
+builder.Services.AddScoped<RealEstateMarketplace.Services.Identity.EmailVerificationService>();
+builder.Services.AddSingleton<RealEstateMarketplace.Services.Payments.DummyPaymentGateway>();
+builder.Services.AddHostedService<RealEstateMarketplace.Services.Payments.PromotionExpiryService>();
+builder.Services.AddHostedService<RealEstateMarketplace.Services.RentalStatusService>();
+
+// ==========================================
+// RABBITMQ (System 1 <-> System 2)
+// ==========================================
+
+// Shared connection + topology (SharedContracts)
+builder.Services.AddRabbitMqMessaging(
+    builder.Configuration, "RealEstateMarketplace");
+
+// Publishes OutboxMessages (e.g. TransferRequested)
+builder.Services.AddHostedService<OutboxPublisherService>();
+
+// Receives case updates from the Transfer Service
+builder.Services.AddHostedService<TransferUpdatesConsumer>();
 
 // ==========================================
 // DATABASE CONNECTION
@@ -27,8 +72,12 @@ var connectionString = builder.Configuration
     ?? throw new InvalidOperationException(
         "Connection string 'DefaultConnection' not found.");
 
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(connectionString));
+builder.Services.AddSingleton<NotificationPushInterceptor>();
+
+builder.Services.AddDbContext<ApplicationDbContext>((sp, options) =>
+    options.UseSqlServer(connectionString)
+        // pushes new notifications live over SignalR after each save
+        .AddInterceptors(sp.GetRequiredService<NotificationPushInterceptor>()));
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
@@ -52,6 +101,16 @@ builder.Services.AddDefaultIdentity<ApplicationUser>(options =>
 
 builder.Services.AddControllersWithViews();
 
+// Both apps run on localhost and browsers share cookies across ports,
+// so each app needs its own cookie names or signing in to one signs you out of the other.
+builder.Services.ConfigureApplicationCookie(o => o.Cookie.Name = "Marketplace.Auth");
+builder.Services.Configure<Microsoft.AspNetCore.Mvc.CookieTempDataProviderOptions>(
+    o => o.Cookie.Name = "Marketplace.TempData");
+
+// Re-check the security stamp every minute, so suspending a user or
+// removing a role signs them out quickly (default is 30 minutes).
+builder.Services.Configure<SecurityStampValidatorOptions>(o => o.ValidationInterval = TimeSpan.FromMinutes(1));
+
 // ==========================================
 // SIGNALR - REAL-TIME CHAT
 // ==========================================
@@ -62,7 +121,16 @@ builder.Services.AddSignalR();
 // EMAIL AND PHOTO SERVICES
 // ==========================================
 
-builder.Services.AddTransient<IEmailSender, SmtpEmailSender>();
+// Real SMTP when SmtpSettings are configured (user-secrets),
+// otherwise emails are printed to the console (development).
+if (!string.IsNullOrWhiteSpace(builder.Configuration["SmtpSettings:Host"]))
+{
+    builder.Services.AddTransient<IEmailSender, SmtpEmailSender>();
+}
+else
+{
+    builder.Services.AddTransient<IEmailSender, ConsoleEmailSender>();
+}
 
 builder.Services.AddScoped<PropertyPhotoService>();
 
@@ -70,7 +138,15 @@ builder.Services.AddScoped<PropertyPhotoService>();
 // BUILD APPLICATION
 // ==========================================
 
+// Health checks (spec §40): GET /health shows whether the database and RabbitMQ are reachable.
+builder.Services.AddHealthChecks()
+    .AddDbContextCheck<RealEstateMarketplace.Data.ApplicationDbContext>("database")
+    .AddCheck<SharedContracts.Messaging.RabbitMqHealthCheck>("rabbitmq");
+
 var app = builder.Build();
+
+// Migrations (development), Admin role and optional seeded admin
+await DataSeeder.SeedAsync(app.Services, app.Environment.IsDevelopment());
 
 // ==========================================
 // ERROR HANDLING
@@ -96,6 +172,8 @@ app.UseStaticFiles();
 
 app.UseRouting();
 
+app.UseRateLimiter();
+
 // Authentication before authorization
 app.UseAuthentication();
 app.UseAuthorization();
@@ -111,6 +189,7 @@ app.MapStaticAssets();
 // ==========================================
 
 app.MapHub<ChatHub>("/chatHub");
+app.MapHub<NotificationHub>("/hubs/notifications");
 
 // ==========================================
 // MVC ROUTING
@@ -140,5 +219,10 @@ app.MapRazorPages()
 // ==========================================
 // START APPLICATION
 // ==========================================
+
+app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    ResponseWriter = SharedContracts.Messaging.HealthResponse.WriteAsync
+});
 
 app.Run();

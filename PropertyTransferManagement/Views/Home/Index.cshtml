@@ -1,8 +1,26 @@
 ﻿@{
-    ViewData["Title"] = "Home Page";
+    ViewData["Title"] = "Welcome";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<div class="py-5">
+    <h1 class="display-6 mb-3">Property Ownership Transfer Management</h1>
+    <p class="lead col-lg-8">
+        After you agree on a sale in the Real Estate Marketplace, this service helps the buyer and the
+        seller go through the administrative steps of the ownership transfer: uploading documents,
+        working with an assigned case officer and following the case until it is closed.
+    </p>
+
+    <div class="alert alert-info col-lg-8">
+        <strong>Have a case reference?</strong>
+        Register with the <em>same email address</em> you use in the Marketplace and confirm it.
+        Your case is then linked to your account automatically.
+    </div>
+
+    <a class="btn btn-primary" asp-area="Identity" asp-page="/Account/Register">Create an account</a>
+    <a class="btn btn-outline-secondary ms-2" asp-area="Identity" asp-page="/Account/Login">Sign in</a>
+
+    <p class="text-muted small mt-4 col-lg-8">
+        This is a university project simulation. It records progress of the administrative process and
+        does not itself transfer legal ownership or replace the competent authorities.
+    </p>
 </div>

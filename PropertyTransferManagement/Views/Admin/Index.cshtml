@@ -1,0 +1,91 @@
+@model AdminDashboardViewModel
+@{
+    ViewData["Title"] = "Case Queue";
+
+    var tiles = new (string Label, int Value)[]
+    {
+        ("Total requests", Model.TotalCases),
+        ("New this month", Model.NewThisMonth),
+        ("Unassigned", Model.Unassigned),
+        ("Waiting for documents", Model.AwaitingDocuments),
+        ("Under review", Model.UnderReview),
+        ("Completed", Model.Completed),
+        ("Cancelled / rejected", Model.CancelledOrRejected)
+    };
+}
+
+<h2 class="mb-3">Transfer Case Queue</h2>
+
+<partial name="_Alerts" />
+
+<div class="row g-3 mb-4">
+    @foreach (var (label, value) in tiles)
+    {
+        <div class="col-6 col-md-3 col-xl">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="small text-muted">@label</div>
+                    <div class="fs-3 fw-semibold">@value</div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@if (Model.Officers.Count == 0)
+{
+    <div class="alert alert-warning">
+        There are no officers yet. <a asp-action="Officers">Create an officer account</a> to assign cases.
+    </div>
+}
+
+@if (Model.Cases.Count == 0)
+{
+    <div class="alert alert-info">No transfer requests have been received from the Marketplace yet.</div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Case</th><th>Property</th><th>Price</th><th>Status</th>
+                    <th>Officer</th><th style="min-width:280px">Assign / reassign</th><th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var c in Model.Cases)
+                {
+                    <tr class="@(c.AssignedOfficerId == null ? "table-warning" : "")">
+                        <td class="fw-semibold">
+                            @c.CaseNumber
+                            <div class="small text-muted">@c.CreatedAt.ToLocalTime().ToString("g")</div>
+                        </td>
+                        <td>@c.PropertyTitle<div class="small text-muted">@c.BuyerFullName → from @c.SellerFullName</div></td>
+                        <td>@c.AgreedPrice.ToString("N0") @c.Currency</td>
+                        <td><span class="badge @CaseWorkflow.BadgeClass(c.Status)">@CaseWorkflow.Display(c.Status)</span></td>
+                        <td>@(c.AssignedOfficer == null ? "Unassigned" : $"{c.AssignedOfficer.FirstName} {c.AssignedOfficer.LastName}")</td>
+                        <td>
+                            @if (Model.Officers.Count > 0 && c.Status != TransferCaseStatus.CaseClosed)
+                            {
+                                <form asp-action="Assign" method="post" class="d-flex gap-1">
+                                    <input type="hidden" name="caseId" value="@c.Id" />
+                                    <select name="officerId" class="form-select form-select-sm">
+                                        @foreach (var o in Model.Officers)
+                                        {
+                                            <option value="@o.Id" selected="@(o.Id == c.AssignedOfficerId)">
+                                                @o.Name — @o.ActiveCases active
+                                            </option>
+                                        }
+                                    </select>
+                                    <button class="btn btn-sm btn-primary">@(c.AssignedOfficerId == null ? "Assign" : "Reassign")</button>
+                                </form>
+                            }
+                        </td>
+                        <td><a class="btn btn-sm btn-outline-secondary" asp-controller="Officer" asp-action="Case" asp-route-id="@c.Id">View</a></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

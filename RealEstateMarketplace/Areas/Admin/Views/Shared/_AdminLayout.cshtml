@@ -1,4 +1,4 @@
-﻿@{
+@{
     var currentController =
         ViewContext.RouteData.Values["controller"]?.ToString();
 }
@@ -11,6 +11,8 @@
           content="width=device-width, initial-scale=1.0" />
 
     <title>@ViewData["Title"] - Real Estate Admin</title>
+
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
 
     <style>
             * {
@@ -138,13 +140,34 @@
                     Pending Listings
                 </a>
 
-                <span class="disabled-link">
-                    Manage Users (Soon)
-                </span>
+                <a href="@Url.Content("~/Admin/PublishedListings")"
+                   class="@(currentController == "PublishedListings" ? "active" : "")">
+                    All Listings
+                </a>
 
-                <span class="disabled-link">
-                    Reports (Soon)
-                </span>
+                <a href="@Url.Content("~/Admin/Reports")"
+                   class="@(currentController == "Reports" ? "active" : "")">
+                    Reports
+                </a>
+
+                <a href="@Url.Content("~/Admin/Reviews")"
+                   class="@(currentController == "Reviews" ? "active" : "")">
+                    Reviews
+                </a>
+
+                <a href="@Url.Content("~/Admin/Users")"
+                   class="@(currentController == "Users" ? "active" : "")">
+                    Users
+                </a>
+
+                <a href="@Url.Content("~/Admin/Payments")"
+                   class="@(currentController == "Payments" ? "active" : "")">
+                    Promotions
+                </a>
+
+                <a href="@Url.Content("~/")">
+                    Marketplace
+                </a>
 
                 <form method="post"
                       action="@Url.Content("~/Identity/Account/Logout")"
@@ -171,6 +194,7 @@
         Real Estate Marketplace — Admin Panel
     </footer>
 
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     @await RenderSectionAsync("Scripts", required: false)
 
 </body>

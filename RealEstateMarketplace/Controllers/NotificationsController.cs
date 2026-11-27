@@ -38,6 +38,7 @@ namespace RealEstateMarketplace.Controllers
                     n.UserId == userId &&
                     !n.IsDeleted)
                 .OrderByDescending(n => n.CreatedAt)
+                .Take(50) // the latest 50 are enough; old ones stay in the database
                 .ToListAsync();
 
             return View(notifications);
