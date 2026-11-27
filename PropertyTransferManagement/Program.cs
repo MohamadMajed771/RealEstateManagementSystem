@@ -70,6 +70,12 @@ builder.Services.AddSingleton<DocumentStorage>();
 
 builder.Services.AddControllersWithViews();
 
+// Both apps run on localhost and browsers share cookies across ports,
+// so each app needs its own cookie names or signing in to one signs you out of the other.
+builder.Services.ConfigureApplicationCookie(o => o.Cookie.Name = "TransferService.Auth");
+builder.Services.Configure<Microsoft.AspNetCore.Mvc.CookieTempDataProviderOptions>(
+    o => o.Cookie.Name = "TransferService.TempData");
+
 // ==========================================
 // RABBITMQ (System 1 <-> System 2)
 // ==========================================

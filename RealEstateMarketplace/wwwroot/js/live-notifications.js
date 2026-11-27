@@ -17,7 +17,9 @@
             badge.textContent = '0';
             bell.append(badge);
         }
-        badge.textContent = String((parseInt(badge.textContent, 10) || 0) + 1);
+        const count = (parseInt(badge.textContent, 10) || 0) + 1;
+        badge.textContent = count > 99 ? '99+' : String(count);
+        bell.setAttribute('aria-label', `My Notifications, ${count} unread`);
     }
 
     function toast(n) {

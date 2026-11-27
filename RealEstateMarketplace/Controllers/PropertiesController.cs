@@ -50,11 +50,15 @@ namespace RealEstateMarketplace.Controllers
                 .AsNoTracking()
                 .Where(l =>
                     l.Id == id &&
-                    l.Status == ListingStatus.Approved &&
+                    // Sold / rented listings stay readable (with their reviews), but cannot be requested.
+                    (l.Status == ListingStatus.Approved ||
+                     l.Status == ListingStatus.Sold ||
+                     l.Status == ListingStatus.Rented) &&
                     !l.IsDeleted)
                 .Select(l => new PublicPropertyDetailsViewModel
                 {
                     Id = l.Id,
+                    Status = l.Status,
                     Title = l.Title,
                     Description = l.Description,
                     ListingType = l.ListingType,

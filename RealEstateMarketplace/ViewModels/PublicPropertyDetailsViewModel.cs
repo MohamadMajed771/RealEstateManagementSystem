@@ -7,6 +7,9 @@ namespace RealEstateMarketplace.ViewModels
     {
         public int Id { get; set; }
 
+        /// <summary>Approved, or Sold / Rented (read-only page).</summary>
+        public ListingStatus Status { get; set; } = ListingStatus.Approved;
+
         // Listing information
         public string Title { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;

@@ -97,6 +97,13 @@ namespace PropertyTransferManagement.Controllers
             var userId = _userManager.GetUserId(User)!;
 
             var roles = await MyRolesAsync(id, userId);
+            if (roles.Count == 0)
+            {
+                // New case for someone who already has an account (opened from a link): link it now.
+                var user = await _userManager.GetUserAsync(User);
+                if (user != null && await _cases.ClaimInvitationsAsync(user) > 0)
+                    roles = await MyRolesAsync(id, userId);
+            }
             if (roles.Count == 0) return NotFound();
 
             var transferCase = await _db.TransferCases
