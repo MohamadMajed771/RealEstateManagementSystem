@@ -143,6 +143,12 @@ namespace PropertyTransferManagement.Controllers
             if (!await _access.IsOfficerAsync(request.TransferCaseId, User)) return Forbid();
             var back = RedirectToAction("Case", "Officer", new { id = request.TransferCaseId });
 
+            if (!CaseExtrasDisplay.LoanIsOpen(request.Status))
+            {
+                TempData["Error"] = "This loan-assistance request is already finished and cannot be changed.";
+                return back;
+            }
+
             notes = Trim(notes, 2000);
             lenderName = Trim(lenderName, 200);
 

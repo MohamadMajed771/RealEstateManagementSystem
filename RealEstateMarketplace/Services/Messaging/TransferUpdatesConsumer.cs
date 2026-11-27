@@ -75,6 +75,20 @@ namespace RealEstateMarketplace.Services.Messaging
                             "to upload your documents and follow the case.");
                         break;
 
+                    case TransferStatusChanged e when e.NewStatus == "Cancelled":
+                        // The officer cancelled the case: the sale is back to "confirmed",
+                        // so the buyer can request a new transfer later.
+                        request.Status = TransferRequestStatus.Cancelled;
+                        request.ExternalStatus = e.NewStatus;
+                        transaction.Status = TransactionStatus.Confirmed;
+                        transaction.UpdatedAt = now;
+
+                        NotifyBoth(db, transaction,
+                            $"Transfer case {e.CaseNumber} cancelled",
+                            $"The ownership-transfer case for '{title}' was cancelled by the Transfer Service." +
+                            (string.IsNullOrWhiteSpace(e.Note) ? "" : $" Reason: {e.Note}"));
+                        break;
+
                     case TransferStatusChanged e:
                         request.Status = TransferRequestStatus.InProgress;
                         request.ExternalStatus = e.NewStatus;

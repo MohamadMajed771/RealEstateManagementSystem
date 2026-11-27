@@ -98,7 +98,10 @@ namespace PropertyTransferManagement.Hubs
 
             await _db.SaveChangesAsync();
 
-            await Clients.Group(Group(conversationId)).SendAsync("message",
+            // Send to the users who are members right now (not to the SignalR group),
+            // so someone removed from the case stops receiving messages immediately.
+            var recipients = others.Select(p => p.UserId).Append(UserId).ToList();
+            await Clients.Users(recipients).SendAsync("message",
                 new ChatMessageDto(message.Id, conversationId, UserId, senderName, membership.Role.ToString(), content, now));
         }
 

@@ -57,6 +57,11 @@ namespace PropertyTransferManagement.Controllers
 
             var transferCase = await _db.TransferCases.FindAsync(caseId);
             if (transferCase == null) return NotFound();
+            if (CaseWorkflow.IsFinished(transferCase.Status))
+            {
+                TempData["Error"] = "This case is closed; no new appointments can be scheduled.";
+                return back;
+            }
 
             var appointment = new CaseAppointment
             {
@@ -104,6 +109,12 @@ namespace PropertyTransferManagement.Controllers
                 return back;
 
             var transferCase = (await _db.TransferCases.FindAsync(appointment.TransferCaseId))!;
+            if (appointment.Status is not (CaseAppointmentStatus.Scheduled or CaseAppointmentStatus.Rescheduled) ||
+                CaseWorkflow.IsFinished(transferCase.Status))
+            {
+                TempData["Error"] = "This appointment can no longer be changed.";
+                return back;
+            }
             string message;
 
             if (status == CaseAppointmentStatus.Rescheduled)
@@ -114,6 +125,11 @@ namespace PropertyTransferManagement.Controllers
                     return back;
                 }
                 var start = DateTime.SpecifyKind(newStartAt.Value, DateTimeKind.Local).ToUniversalTime();
+                if (start < DateTime.UtcNow)
+                {
+                    TempData["Error"] = "The new date and time must be in the future.";
+                    return back;
+                }
                 var minutes = durationMinutes is >= 10 and <= 480 ? durationMinutes.Value : (int)(appointment.EndAt - appointment.StartAt).TotalMinutes;
                 appointment.StartAt = start;
                 appointment.EndAt = start.AddMinutes(minutes);

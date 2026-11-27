@@ -263,7 +263,8 @@ namespace PropertyTransferManagement.Controllers
                 return RedirectToAction(nameof(Case), new { id });
             }
 
-            if (newStatus == TransferCaseStatus.ReadyForProcessing)
+            // Also checked for External Processing: "On Hold" may jump there directly.
+            if (newStatus is TransferCaseStatus.ReadyForProcessing or TransferCaseStatus.ExternalProcessingInProgress)
             {
                 bool allApproved = await _db.CaseDocumentRequirements
                     .Where(r => r.TransferCaseId == id && r.IsMandatory)

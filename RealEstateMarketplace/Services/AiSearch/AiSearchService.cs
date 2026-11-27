@@ -62,7 +62,9 @@ namespace RealEstateMarketplace.Services.AiSearch
                     if (answer != null)
                         return InterpretationBuilder.FromAnswer(answer, places, "ai");
                 }
-                catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)
+                // Any provider problem (network, timeout, unexpected JSON shape) falls back
+                // to the rule-based parser; only the user's own cancellation is rethrown.
+                catch (Exception ex) when (!ct.IsCancellationRequested)
                 {
                     _logger.LogWarning(ex, "AI search provider failed; using the rule-based parser.");
                 }

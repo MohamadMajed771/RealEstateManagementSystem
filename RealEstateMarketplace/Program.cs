@@ -106,6 +106,10 @@ builder.Services.ConfigureApplicationCookie(o => o.Cookie.Name = "Marketplace.Au
 builder.Services.Configure<Microsoft.AspNetCore.Mvc.CookieTempDataProviderOptions>(
     o => o.Cookie.Name = "Marketplace.TempData");
 
+// Re-check the security stamp every minute, so suspending a user or
+// removing a role signs them out quickly (default is 30 minutes).
+builder.Services.Configure<SecurityStampValidatorOptions>(o => o.ValidationInterval = TimeSpan.FromMinutes(1));
+
 // ==========================================
 // SIGNALR - REAL-TIME CHAT
 // ==========================================

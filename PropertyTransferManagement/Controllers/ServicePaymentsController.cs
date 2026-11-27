@@ -121,9 +121,18 @@ namespace PropertyTransferManagement.Controllers
 
             if (!ModelState.IsValid) return View(Fill(payment, model));
 
-            payment.Status = ServicePaymentStatus.Processing;
-            payment.UpdatedAt = DateTime.UtcNow;
-            await _db.SaveChangesAsync();
+            // Claim the payment in one UPDATE so two quick submits cannot both charge.
+            var claimed = await _db.ServicePayments
+                .Where(p => p.Id == payment.Id &&
+                            (p.Status == ServicePaymentStatus.Pending || p.Status == ServicePaymentStatus.Failed))
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(p => p.Status, ServicePaymentStatus.Processing)
+                    .SetProperty(p => p.UpdatedAt, DateTime.UtcNow));
+            if (claimed == 0)
+            {
+                TempData["Error"] = "This payment is already being processed.";
+                return RedirectToAction("Details", "Cases", new { id = payment.TransferCaseId });
+            }
 
             var result = _gateway.Charge(payment.Amount, payment.Currency, model.CardNumber, model.ExpMonth, model.ExpYear, model.Cvc);
             var now = DateTime.UtcNow;

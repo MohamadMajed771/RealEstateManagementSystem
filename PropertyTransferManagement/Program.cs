@@ -76,6 +76,10 @@ builder.Services.ConfigureApplicationCookie(o => o.Cookie.Name = "TransferServic
 builder.Services.Configure<Microsoft.AspNetCore.Mvc.CookieTempDataProviderOptions>(
     o => o.Cookie.Name = "TransferService.TempData");
 
+// Re-check the security stamp every minute, so suspending a user or
+// removing a role signs them out quickly (default is 30 minutes).
+builder.Services.Configure<SecurityStampValidatorOptions>(o => o.ValidationInterval = TimeSpan.FromMinutes(1));
+
 // ==========================================
 // RABBITMQ (System 1 <-> System 2)
 // ==========================================

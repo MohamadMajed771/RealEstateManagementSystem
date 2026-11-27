@@ -158,9 +158,18 @@ namespace RealEstateMarketplace.Controllers
                 return View(ToCheckout(payment, model));
             }
 
-            payment.Status = PaymentStatus.Processing;
-            payment.UpdatedAt = DateTime.UtcNow;
-            await _context.SaveChangesAsync();
+            // Claim the payment in one UPDATE so two quick submits cannot both charge.
+            var claimed = await _context.Payments
+                .Where(p => p.Id == payment.Id &&
+                            (p.Status == PaymentStatus.Pending || p.Status == PaymentStatus.Failed))
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(p => p.Status, PaymentStatus.Processing)
+                    .SetProperty(p => p.UpdatedAt, DateTime.UtcNow));
+            if (claimed == 0)
+            {
+                TempData["ErrorMessage"] = "This payment is already being processed.";
+                return RedirectToAction("MyListings", "PropertyListings");
+            }
 
             var result = _gateway.Charge(payment.Amount, payment.Currency, model.CardNumber,
                 model.ExpMonth, model.ExpYear, model.Cvc);
