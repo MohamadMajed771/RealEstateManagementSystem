@@ -49,15 +49,16 @@ Only the search sentence is sent. The model returns filters, and every result is
 
 **System 1 — Marketplace**
 - Registration with optional ID OCR (Tesseract.js, runs in the browser, the picture is never uploaded) and a 6-digit email code
+- Forgot password: a 6-digit reset code by email, then the new password twice (wrong codes count towards lockout)
 - Listings with facilities, rental period / installments, GPS or map location, photos; admin approval (edits go back to moderation)
 - Search: filters, interactive map (Leaflet + OpenStreetMap), distance from a clicked point or "my location"
 - AI search (free OpenAI-compatible endpoint or built-in reader), rate limited
-- Favorites, saved searches, live chat with owners (SignalR), live notifications
-- Transactions, rental agreements, ownership-transfer request to System 2 and live status from RabbitMQ
+- Favorites with a side-by-side comparison table, saved searches, live chat with owners (SignalR), live notifications
+- Transactions, rental agreements, ownership-transfer request to System 2 and live status from RabbitMQ; buyer or seller can cancel the request (`TransferCancelled`)
 - Reviews only after a completed sale or a started rental
 - Report a listing; admin investigates and dismisses, requests corrections, hides, removes or suspends the owner
 - Promoted listings paid through a test payment gateway (`4242 4242 4242 4242` succeeds, `4000 0000 0000 0002` is declined)
-- Admin: dashboard with Chart.js charts, users (suspend / reactivate / roles), all listings, reviews, payments, PDF + Excel exports
+- Admin: dashboard with Chart.js charts, most viewed properties, sale / rent counts, users (suspend / reactivate / roles), all listings, reviews, payments, PDF + Excel exports
 
 **System 2 — Transfer service**
 - Cases created from RabbitMQ, buyer/seller linked by confirmed email, document checklist and review

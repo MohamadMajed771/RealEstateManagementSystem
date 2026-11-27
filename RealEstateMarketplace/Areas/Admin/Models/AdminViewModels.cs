@@ -30,6 +30,11 @@ namespace RealEstateMarketplace.Areas.Admin.Models
         public int ActivePromotions { get; set; }
         public decimal PromotionRevenue { get; set; }
         public decimal SalesVolume { get; set; }
+        public int PublishedForSale { get; set; }
+        public int PublishedForRent { get; set; }
+
+        /// <summary>Most viewed published listings (id, title, city, views).</summary>
+        public List<(int Id, string Title, string City, int Views)> MostViewed { get; set; } = new();
 
         public List<ChartPoint> ListingsPerMonth { get; set; } = new();
         public List<ChartPoint> UsersPerMonth { get; set; } = new();

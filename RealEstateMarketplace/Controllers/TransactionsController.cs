@@ -306,6 +306,96 @@ namespace RealEstateMarketplace.Controllers
             return RedirectToAction(nameof(MyTransactions));
         }
 
+        // ==========================================
+        // CANCEL OWNERSHIP TRANSFER (BUYER OR SELLER)
+        // ==========================================
+        //
+        // Sends TransferCancelled to System 2 (through the outbox),
+        // which cancels the case. The sale goes back to "Confirmed".
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CancelTransfer(int id, string? reason)
+        {
+            var userId = _userManager.GetUserId(User);
+            if (string.IsNullOrEmpty(userId))
+                return Challenge();
+
+            var transaction = await _context.Transactions
+                .Include(t => t.PropertyListing)
+                .FirstOrDefaultAsync(t => t.Id == id);
+
+            if (transaction == null)
+                return NotFound();
+
+            if (transaction.BuyerId != userId && transaction.SellerId != userId)
+                return Forbid();
+
+            reason = reason?.Trim();
+            if (string.IsNullOrEmpty(reason))
+            {
+                TempData["Error"] = "Please give a reason for cancelling the transfer request.";
+                return RedirectToAction(nameof(MyTransactions));
+            }
+            if (reason.Length > 500) reason = reason[..500];
+
+            var request = await _context.TransferRequests
+                .Where(r => r.TransactionId == id)
+                .OrderByDescending(r => r.CreatedAt)
+                .FirstOrDefaultAsync();
+
+            if (request == null ||
+                request.Status is not (TransferRequestStatus.Sent or TransferRequestStatus.Accepted
+                    or TransferRequestStatus.InProgress))
+            {
+                TempData["Error"] = "There is no active ownership-transfer request to cancel.";
+                return RedirectToAction(nameof(MyTransactions));
+            }
+
+            // Once the officer sent the file for official processing, only the
+            // Transfer Service can stop it (avoids a "completed" after "cancelled").
+            if (request.ExternalStatus is "ReadyForProcessing" or "ExternalProcessingInProgress")
+            {
+                TempData["Error"] = "The case is already in official processing. Contact your case officer to stop it.";
+                return RedirectToAction(nameof(MyTransactions));
+            }
+
+            var now = DateTime.UtcNow;
+            var who = transaction.BuyerId == userId ? "buyer" : "seller";
+
+            request.Status = TransferRequestStatus.Cancelled;
+            request.ExternalStatus = "Cancelled";
+            request.ExternalStatusUpdatedAt = now;
+            request.UpdatedAt = now;
+
+            transaction.Status = TransactionStatus.Confirmed;
+            transaction.UpdatedAt = now;
+
+            Outbox.Add(_context, new TransferCancelled
+            {
+                TransferRequestId = request.Id,
+                Reason = $"Cancelled by the {who}: {reason}"
+            });
+
+            _context.Notifications.Add(new Notification
+            {
+                UserId = who == "buyer" ? transaction.SellerId : transaction.BuyerId,
+                Title = "Ownership transfer cancelled",
+                Message = $"The {who} cancelled the ownership-transfer request for " +
+                          $"'{transaction.PropertyListing.Title}'. Reason: {reason}",
+                Type = NotificationType.TransferStatusChanged,
+                RelatedEntityId = transaction.Id,
+                RelatedEntityType = "Transaction",
+                ActionUrl = "/Transactions/MyTransactions",
+                CreatedAt = now
+            });
+
+            await _context.SaveChangesAsync();
+
+            TempData["Success"] = "The ownership-transfer request was cancelled.";
+            return RedirectToAction(nameof(MyTransactions));
+        }
+
         private static TransferParty ToParty(ApplicationUser user) => new()
         {
             MarketplaceUserId = user.Id,

@@ -368,6 +368,26 @@
                                                 Open Transfer Service
                                             </a>
                                         }
+
+                                        @if (transferRequest.Status is TransferRequestStatus.Sent
+                                                 or TransferRequestStatus.Accepted
+                                                 or TransferRequestStatus.InProgress)
+                                        {
+                                            <form asp-controller="Transactions"
+                                                  asp-action="CancelTransfer"
+                                                  method="post"
+                                                  class="mt-2">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="id" value="@transaction.Id" />
+                                                <input name="reason" class="form-control form-control-sm mb-1"
+                                                       maxlength="500" required
+                                                       placeholder="Reason for cancelling" />
+                                                <button type="submit" class="btn btn-outline-danger btn-sm"
+                                                        onclick="return confirm('Cancel the ownership-transfer request? The Transfer Service will close the case.');">
+                                                    Cancel transfer request
+                                                </button>
+                                            </form>
+                                        }
                                     }
 
                                     @if (canRequestTransfer)

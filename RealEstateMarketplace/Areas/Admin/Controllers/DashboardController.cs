@@ -49,6 +49,17 @@ namespace RealEstateMarketplace.Areas.Admin.Controllers
                     .SumAsync(p => (decimal?)p.Amount) ?? 0
             };
 
+            vm.PublishedForSale = await listings.CountAsync(l => l.Status == ListingStatus.Approved && l.ListingType == ListingType.Sale);
+            vm.PublishedForRent = await listings.CountAsync(l => l.Status == ListingStatus.Approved && l.ListingType == ListingType.Rent);
+
+            vm.MostViewed = (await listings
+                    .Where(l => l.Status == ListingStatus.Approved || l.Status == ListingStatus.Sold || l.Status == ListingStatus.Rented)
+                    .OrderByDescending(l => l.ViewCount).ThenBy(l => l.Id)
+                    .Take(5)
+                    .Select(l => new { l.Id, l.Title, l.Property.City, l.ViewCount })
+                    .ToListAsync())
+                .Select(x => (x.Id, x.Title, x.City, x.ViewCount)).ToList();
+
             var listingMonths = await listings.Where(l => l.CreatedAt >= since)
                 .GroupBy(l => new { l.CreatedAt.Year, l.CreatedAt.Month })
                 .Select(g => new { g.Key.Year, g.Key.Month, Count = g.Count() })

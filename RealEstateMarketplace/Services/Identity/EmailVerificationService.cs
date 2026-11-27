@@ -62,6 +62,55 @@ namespace RealEstateMarketplace.Services.Identity
             await _userManager.ResetAccessFailedCountAsync(user);
             return VerifyResult.Verified;
         }
+
+        // ---------- Password reset (same 6-digit code mechanism) ----------
+
+        public const string ResetPurpose = "PasswordReset";
+
+        /// <returns>false when a code was sent less than a minute ago.</returns>
+        public async Task<bool> SendResetCodeAsync(ApplicationUser user)
+        {
+            var key = "reset-code-sent:" + user.Id;
+            if (_cache.TryGetValue(key, out _)) return false;
+
+            var code = await _userManager.GenerateUserTokenAsync(user, TokenOptions.DefaultEmailProvider, ResetPurpose);
+            _cache.Set(key, true, ResendCooldown);
+
+            await _emailSender.SendEmailAsync(user.Email!, "Your RealEstateMarketplace password reset code",
+                $"<p>Hello {HtmlEncoder.Default.Encode(user.FirstName)},</p>" +
+                $"<p>Your password reset code is:</p><p style='font-size:28px;font-weight:bold;letter-spacing:6px'>{code}</p>" +
+                "<p>The code expires in a few minutes. If you did not ask to reset your password, ignore this email.</p>");
+            return true;
+        }
+
+        /// <summary>
+        /// Checks the reset code and sets the new password. Wrong codes count
+        /// as failed attempts (lockout). Changing the password also changes the
+        /// security stamp, so the same code cannot be used twice.
+        /// </summary>
+        public async Task<(VerifyResult Result, IEnumerable<IdentityError> Errors)> ResetPasswordAsync(
+            ApplicationUser user, string code, string newPassword)
+        {
+            if (await _userManager.IsLockedOutAsync(user)) return (VerifyResult.LockedOut, Array.Empty<IdentityError>());
+
+            code = new string((code ?? "").Where(char.IsDigit).ToArray());
+            bool ok = code.Length == 6 &&
+                      await _userManager.VerifyUserTokenAsync(user, TokenOptions.DefaultEmailProvider, ResetPurpose, code);
+
+            if (!ok)
+            {
+                await _userManager.AccessFailedAsync(user);
+                var locked = await _userManager.IsLockedOutAsync(user);
+                return (locked ? VerifyResult.LockedOut : VerifyResult.WrongCode, Array.Empty<IdentityError>());
+            }
+
+            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+            var result = await _userManager.ResetPasswordAsync(user, token, newPassword);
+            if (!result.Succeeded) return (VerifyResult.WrongCode, result.Errors);
+
+            await _userManager.ResetAccessFailedCountAsync(user);
+            return (VerifyResult.Verified, Array.Empty<IdentityError>());
+        }
     }
 
     public enum VerifyResult { Verified, WrongCode, LockedOut }
