@@ -1,4 +1,4 @@
-﻿
+
 using RealEstateMarketplace.Models;
 
 namespace RealEstateMarketplace.ViewModels
@@ -41,6 +41,27 @@ namespace RealEstateMarketplace.ViewModels
 
         // Publication information
         public DateTime? PublishedAt { get; set; }
+
+        // Facilities and terms
+        public int? ParkingSpaces { get; set; }
+        public bool IsFurnished { get; set; }
+        public bool HasBalcony { get; set; }
+        public bool HasGarden { get; set; }
+        public bool HasTerrace { get; set; }
+        public string? OtherFacilities { get; set; }
+        public int? RentalPeriodMonths { get; set; }
+        public bool InstallmentsAccepted { get; set; }
+        public int? InstallmentMonths { get; set; }
+        public bool IsFeatured { get; set; }
+        public int ViewCount { get; set; }
+
+        // Owner information
+        public DateTime SellerMemberSince { get; set; }
+        public int SellerPublishedListings { get; set; }
+
+        // Reviews from verified (completed) transactions
+        public List<PropertyReviewItem> Reviews { get; set; } = new();
+        public double? AverageRating => Reviews.Count == 0 ? null : Reviews.Average(r => r.Rating);
     }
 
     public class PublicPropertyPhotoViewModel
@@ -54,5 +75,17 @@ namespace RealEstateMarketplace.ViewModels
         public bool IsCoverPhoto { get; set; }
 
         public int DisplayOrder { get; set; }
+    }
+
+    public class PropertyReviewItem
+    {
+        public string ReviewerName { get; set; } = string.Empty;
+        public int Rating { get; set; }
+        public int? AccuracyRating { get; set; }
+        public int? ConditionRating { get; set; }
+        public int? CommunicationRating { get; set; }
+        public bool IsRental { get; set; }
+        public string? Comment { get; set; }
+        public DateTime CreatedAt { get; set; }
     }
 }

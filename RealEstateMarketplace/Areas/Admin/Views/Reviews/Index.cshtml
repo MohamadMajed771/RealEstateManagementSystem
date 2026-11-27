@@ -1,0 +1,43 @@
+@model List<PropertyReview>
+@{ ViewData["Title"] = "Reviews"; }
+
+<div class="container-xl py-4">
+    <h2 class="mb-3">Reviews</h2>
+    <partial name="_AdminAlerts" />
+
+    @if (Model.Count == 0) { <div class="alert alert-info">No reviews yet.</div> }
+
+    <div class="table-responsive">
+        <table class="table align-middle bg-white">
+            <thead class="table-light">
+                <tr><th>Property</th><th>Reviewer → owner</th><th>Rating</th><th>Comment</th><th>Status</th><th></th></tr>
+            </thead>
+            <tbody>
+            @foreach (var r in Model)
+            {
+                <tr class="@(r.Status == ReviewStatus.Approved ? "" : "table-secondary")">
+                    <td><a target="_blank" href="@Url.Content($"~/Properties/Details/{r.Transaction.PropertyListingId}")">@r.Transaction.PropertyListing.Title</a></td>
+                    <td class="small">@r.Reviewer.Email<br />→ @r.ReviewedUser.Email</td>
+                    <td class="text-warning text-nowrap">@(new string('★', r.Rating))</td>
+                    <td class="small" style="max-width:420px;white-space:pre-line">@r.Comment</td>
+                    <td><span class="badge bg-secondary">@r.Status</span></td>
+                    <td>
+                        <form asp-action="SetStatus" asp-route-id="@r.Id" method="post">
+                            @if (r.Status == ReviewStatus.Approved)
+                            {
+                                <input type="hidden" name="status" value="@ReviewStatus.Rejected" />
+                                <button class="btn btn-sm btn-outline-danger">Hide</button>
+                            }
+                            else
+                            {
+                                <input type="hidden" name="status" value="@ReviewStatus.Approved" />
+                                <button class="btn btn-sm btn-outline-success">Show</button>
+                            }
+                        </form>
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</div>

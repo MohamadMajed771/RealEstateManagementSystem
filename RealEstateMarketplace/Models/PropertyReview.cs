@@ -1,4 +1,4 @@
-﻿
+
 using System.ComponentModel.DataAnnotations;
 
 namespace RealEstateMarketplace.Models
@@ -30,6 +30,16 @@ namespace RealEstateMarketplace.Models
         [Range(1, 5,
             ErrorMessage = "Rating must be between 1 and 5.")]
         public int Rating { get; set; }
+
+        // Optional detail ratings (spec §15: accuracy, condition, communication).
+        [Range(1, 5)]
+        public int? AccuracyRating { get; set; }
+
+        [Range(1, 5)]
+        public int? ConditionRating { get; set; }
+
+        [Range(1, 5)]
+        public int? CommunicationRating { get; set; }
 
         // Optional written review
         [StringLength(2000,

@@ -20,7 +20,32 @@
     var selectedMinSize = ViewBag.MinSize?.ToString();
 
     var currentUrl = Context.Request.Path + Context.Request.QueryString;
+
+    var criteria = ViewBag.Criteria as RealEstateMarketplace.Services.PropertySearchCriteria
+        ?? new RealEstateMarketplace.Services.PropertySearchCriteria();
+
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+
+    // Marker data for the map (only listings with coordinates)
+    var mapItems = Model
+        .Where(p => p.Latitude.HasValue && p.Longitude.HasValue)
+        .Select(p => new
+        {
+            id = p.Id,
+            lat = p.Latitude,
+            lng = p.Longitude,
+            title = p.Title,
+            type = p.PropertyType.ToString(),
+            listing = p.ListingType.ToString(),
+            price = p.Price.ToString("N0") + " " + p.Currency + (p.ListingType == ListingType.Rent ? " / month" : ""),
+            place = p.Area + ", " + p.City,
+            photo = string.IsNullOrEmpty(p.CoverPhotoPath) ? null : Url.Content(p.CoverPhotoPath),
+            featured = p.IsFeatured,
+            url = Url.Action("Details", "Properties", new { id = p.Id })
+        });
 }
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
 <div class="container py-5">
 
@@ -230,6 +255,54 @@
                                placeholder="e.g. 100" />
                     </div>
 
+                    <!-- MAX SIZE -->
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Maximum Surface Area (m²)</label>
+                        <input type="number" name="maxSize" value="@criteria.MaxSize" class="form-control"
+                               min="0" step="0.01" placeholder="e.g. 250" />
+                    </div>
+
+                    <!-- FURNISHED -->
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Furnished</label>
+                        <select name="furnished" class="form-select">
+                            <option value="">Any</option>
+                            <option value="true" selected="@(criteria.Furnished == true)">Furnished</option>
+                            <option value="false" selected="@(criteria.Furnished == false)">Unfurnished</option>
+                        </select>
+                    </div>
+
+                    <!-- PARKING -->
+                    <div class="col-md-4 d-flex align-items-end">
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="hasParking" value="true"
+                                   id="hasParking" checked="@(criteria.HasParking == true)" />
+                            <label class="form-check-label fw-semibold" for="hasParking">Parking available</label>
+                        </div>
+                    </div>
+
+                    <!-- DISTANCE -->
+                    <div class="col-md-8">
+                        <label class="form-label fw-semibold">Distance from a point</label>
+                        <div class="input-group">
+                            <select name="radiusKm" id="radiusKm" class="form-select" style="max-width:160px">
+                                <option value="">Any distance</option>
+                                @foreach (var km in new[] { 1, 2, 5, 10, 20, 50 })
+                                {
+                                    <option value="@km" selected="@(criteria.RadiusKm == km)">Within @km km</option>
+                                }
+                            </select>
+                            <input type="hidden" name="lat" id="centerLat" value="@criteria.Lat?.ToString(inv)" />
+                            <input type="hidden" name="lng" id="centerLng" value="@criteria.Lng?.ToString(inv)" />
+                            <span class="input-group-text small" id="centerLabel">
+                                @(criteria.Lat.HasValue ? $"Point: {criteria.Lat:F4}, {criteria.Lng:F4}" : "Click the map to choose a point")
+                            </span>
+                            <button type="button" class="btn btn-outline-secondary" id="useMyLocation">
+                                My location
+                            </button>
+                        </div>
+                    </div>
+
                 </div>
 
                 <!-- FILTER ACTIONS -->
@@ -286,6 +359,17 @@
                 </div>
 
             </form>
+        </div>
+    </div>
+
+    <!-- INTERACTIVE MAP -->
+    <div class="card shadow-sm border-0 mb-5">
+        <div class="card-body p-0">
+            <div id="searchMap" style="height:480px;border-radius:.375rem;"></div>
+        </div>
+        <div class="card-footer bg-white small text-muted">
+            Click a marker to preview a property. Click anywhere on the map to search around that point.
+            @(Model.Count() - mapItems.Count() > 0 ? $"{Model.Count() - mapItems.Count()} result(s) have no map location." : "")
         </div>
     </div>
 
@@ -360,6 +444,19 @@
 
                             </div>
 
+                            @if (property.IsFeatured)
+                            {
+                                <span class="badge bg-warning text-dark mb-2">★ Featured</span>
+                            }
+                            @if (property.DistanceKm.HasValue)
+                            {
+                                <span class="badge bg-light text-dark border mb-2">@property.DistanceKm.Value.ToString("F1") km away</span>
+                            }
+                            @foreach (var keyword in property.MatchedKeywords)
+                            {
+                                <span class="badge bg-success-subtle text-success-emphasis border mb-2">mentions “@keyword”</span>
+                            }
+
                             <h5 class="card-title fw-bold">
                                 @property.Title
                             </h5>
@@ -393,6 +490,16 @@
                                     <span>
                                         🚿 @property.Bathrooms Baths
                                     </span>
+                                }
+
+                                @if (property.ParkingSpaces > 0)
+                                {
+                                    <span>🚗 @property.ParkingSpaces Parking</span>
+                                }
+
+                                @if (property.IsFurnished)
+                                {
+                                    <span>🛋 Furnished</span>
                                 }
 
                             </div>
@@ -589,3 +696,78 @@
         });
     </script>
 }
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const items = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(mapItems));
+        const form = document.getElementById("propertySearchForm");
+        const latInput = document.getElementById("centerLat");
+        const lngInput = document.getElementById("centerLng");
+        const radius = document.getElementById("radiusKm");
+
+        // Lebanon by default
+        const map = L.map("searchMap").setView([33.8547, 35.8623], 8);
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            maxZoom: 19,
+            attribution: "&copy; OpenStreetMap contributors"
+        }).addTo(map);
+
+        const esc = s => String(s ?? "").replace(/[&<>"']/g, c =>
+            ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+        const bounds = [];
+        items.forEach(p => {
+            const marker = L.marker([p.lat, p.lng]).addTo(map);
+            marker.bindPopup(
+                (p.photo ? `<img src="${esc(p.photo)}" style="width:200px;height:120px;object-fit:cover" class="mb-2 rounded"><br>` : "") +
+                `<strong>${esc(p.title)}</strong>${p.featured ? " ★" : ""}<br>` +
+                `${esc(p.type)} · for ${esc(p.listing.toLowerCase())}<br>` +
+                `<span class="text-primary fw-bold">${esc(p.price)}</span><br>` +
+                `<span class="text-muted">${esc(p.place)}</span><br>` +
+                `<a href="${esc(p.url)}" class="btn btn-sm btn-primary mt-2 text-white">View Details</a>`);
+            bounds.push([p.lat, p.lng]);
+        });
+
+        // Search center + radius circle
+        let centerMarker = null, circle = null;
+        function drawCenter(lat, lng) {
+            if (centerMarker) map.removeLayer(centerMarker);
+            if (circle) map.removeLayer(circle);
+            centerMarker = L.circleMarker([lat, lng], { radius: 7, color: "#dc3545" }).addTo(map);
+            const km = parseFloat(radius.value);
+            if (km) circle = L.circle([lat, lng], { radius: km * 1000, color: "#dc3545", fillOpacity: 0.06 }).addTo(map);
+        }
+
+        function setCenter(lat, lng) {
+            latInput.value = lat.toFixed(6);
+            lngInput.value = lng.toFixed(6);
+            if (!radius.value) radius.value = "5";
+            form.submit();
+        }
+
+        if (latInput.value && lngInput.value) {
+            drawCenter(parseFloat(latInput.value), parseFloat(lngInput.value));
+            if (circle) map.fitBounds(circle.getBounds());
+        } else if (bounds.length) {
+            map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
+        }
+
+        map.on("click", e => setCenter(e.latlng.lat, e.latlng.lng));
+
+        document.getElementById("useMyLocation").addEventListener("click", () => {
+            if (!navigator.geolocation) return alert("Geolocation is not supported by this browser.");
+            navigator.geolocation.getCurrentPosition(
+                pos => setCenter(pos.coords.latitude, pos.coords.longitude),
+                () => alert("Could not get your location."));
+        });
+
+        // The map updates when a filter changes.
+        form.querySelectorAll("select, input[type=checkbox]").forEach(el =>
+            el.addEventListener("change", () => {
+                if (el === radius && !radius.value) { latInput.value = ""; lngInput.value = ""; }
+                if (el === radius && radius.value && !latInput.value) return; // wait for a point
+                form.submit();
+            }));
+    });
+</script>

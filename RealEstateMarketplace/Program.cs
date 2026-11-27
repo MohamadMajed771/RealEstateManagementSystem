@@ -18,6 +18,9 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddScoped<SavedSearchNotificationService>();
 
+builder.Services.AddScoped<PropertySearchService>();
+builder.Services.AddScoped<UserModerationService>();
+
 // ==========================================
 // RABBITMQ (System 1 <-> System 2)
 // ==========================================

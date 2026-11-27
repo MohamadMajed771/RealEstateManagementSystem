@@ -5,7 +5,7 @@ using RealEstateMarketplace.Models;
 
 namespace RealEstateMarketplace.ViewModels
 {
-    public class CreatePropertyListingViewModel
+    public partial class CreatePropertyListingViewModel
     {
         // ==========================================
         // PROPERTY INFORMATION

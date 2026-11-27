@@ -1,4 +1,4 @@
-﻿
+
 using System;
 using System.Data;
 using System.Linq;
@@ -91,6 +91,11 @@ namespace RealEstateMarketplace.Controllers
 
             ViewBag.TransferServiceUrl =
                 _configuration["TransferService:BaseUrl"];
+
+            ViewBag.ReviewedTransactionIds = (await _context.PropertyReviews
+                .Where(r => transactionIds.Contains(r.TransactionId))
+                .Select(r => r.TransactionId)
+                .ToListAsync()).ToHashSet();
 
             return View(transactions);
         }
