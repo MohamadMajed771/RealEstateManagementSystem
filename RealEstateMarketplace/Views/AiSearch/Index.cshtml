@@ -1,0 +1,37 @@
+@{
+    ViewData["Title"] = "AI property search";
+    var examples = new[]
+    {
+        "I want to rent a quiet house in the mountains during the summer. My budget is $1,000 per month and I need at least two bedrooms.",
+        "Furnished apartment for rent under $700 with parking",
+        "Buy a 3 bedroom house with a garden, budget 250k",
+        "Office for rent, at least 80 m2"
+    };
+}
+
+<div class="container py-5" style="max-width:820px">
+    <h2 class="mb-2"><i class="bi bi-stars me-2 text-primary"></i>Describe the property you want</h2>
+    <p class="text-muted">
+        Write it in your own words. The assistant turns it into search filters and shows matching listings
+        from the marketplace on the map. It never makes up properties: every result is a real, approved listing.
+    </p>
+
+    @if (TempData["AiError"] is string err)
+    {
+        <div class="alert alert-warning">@err</div>
+    }
+
+    <form asp-action="Search" method="get" class="card card-body shadow-sm mb-4">
+        <textarea name="q" rows="4" maxlength="500" class="form-control form-control-lg mb-3" required minlength="5"
+                  placeholder="e.g. A two-bedroom apartment for rent near the sea, under $900 a month"></textarea>
+        <button class="btn btn-primary btn-lg"><i class="bi bi-search me-1"></i>Find properties</button>
+    </form>
+
+    <h6 class="text-muted">Try an example</h6>
+    <div class="d-flex flex-column gap-2">
+        @foreach (var ex in examples)
+        {
+            <a class="text-decoration-none border rounded p-2 bg-light small" href="@Url.Action("Search", new { q = ex })">“@ex”</a>
+        }
+    </div>
+</div>

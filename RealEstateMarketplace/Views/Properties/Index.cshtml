@@ -1,4 +1,4 @@
-﻿
+
 @using System.Security.Claims
 @using RealEstateMarketplace.Models
 
@@ -91,6 +91,66 @@
         </div>
     }
 
+    <!-- AI SEARCH -->
+    @{
+        System.Text.Json.JsonElement? ai = null;
+        if (TempData[RealEstateMarketplace.Controllers.AiSearchController.TempDataKey] is string aiJson)
+        {
+            ai = System.Text.Json.JsonDocument.Parse(aiJson).RootElement;
+        }
+    }
+    @if (ai is System.Text.Json.JsonElement a)
+    {
+        <div class="card border-primary mb-4">
+            <div class="card-body">
+                <div class="small text-muted mb-1">
+                    <i class="bi bi-stars me-1"></i>
+                    You asked: “@a.GetProperty("query").GetString()”
+                    · read by @(a.GetProperty("source").GetString() == "ai" ? "the AI assistant" : "the built-in reader")
+                </div>
+                <div class="d-flex flex-wrap gap-2 align-items-center">
+                    <strong class="me-1">Filters:</strong>
+                    @foreach (var item in a.GetProperty("understood").EnumerateArray())
+                    {
+                        <span class="badge bg-primary">@item.GetString()</span>
+                    }
+                    @if (a.GetProperty("understood").GetArrayLength() == 0)
+                    {
+                        <span class="text-muted small">none, showing all listings</span>
+                    }
+                    @if (a.GetProperty("keywords").GetArrayLength() > 0)
+                    {
+                        <strong class="ms-2 me-1">Preferences:</strong>
+                        @foreach (var item in a.GetProperty("keywords").EnumerateArray())
+                        {
+                            <span class="badge bg-light text-dark border">@item.GetString()</span>
+                        }
+                    }
+                </div>
+                @if (a.GetProperty("keywords").GetArrayLength() > 0)
+                {
+                    <div class="small text-muted mt-2">
+                        Preferences only move listings up when their description actually mentions them.
+                    </div>
+                }
+                @foreach (var note in a.GetProperty("notes").EnumerateArray())
+                {
+                    <div class="small text-muted">@note.GetString()</div>
+                }
+                <a asp-controller="AiSearch" asp-action="Index" class="btn btn-sm btn-outline-primary mt-2">New AI search</a>
+            </div>
+        </div>
+    }
+    else
+    {
+        <form asp-controller="AiSearch" asp-action="Search" method="get" class="input-group mb-4 shadow-sm">
+            <span class="input-group-text bg-white"><i class="bi bi-stars text-primary"></i></span>
+            <input name="q" class="form-control form-control-lg" maxlength="500" minlength="5" required
+                   placeholder="Describe it: “2-bedroom apartment for rent near the sea under $900”" />
+            <button class="btn btn-primary">AI search</button>
+        </form>
+    }
+
     <!-- ADVANCED FILTERS -->
     <div class="card shadow-sm border-0 mb-5">
 
@@ -108,6 +168,11 @@
                   asp-controller="Properties"
                   asp-action="Index"
                   method="get">
+                @foreach (var keyword in criteria.Keywords)
+                {
+                    <input type="hidden" name="keywords" value="@keyword" />
+                }
+
 
                 <div class="row g-3">
 

@@ -170,6 +170,12 @@ public class LoginModel : PageModel
                     });
             }
 
+            if (result.IsNotAllowed)
+            {
+                // Email not verified yet: go to the code page
+                return RedirectToPage("./VerifyEmail", new { email = Input.Email });
+            }
+
             if (result.IsLockedOut)
             {
                 _logger.LogWarning("User account locked out.");

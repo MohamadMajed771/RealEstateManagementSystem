@@ -23,6 +23,28 @@ builder.Services.AddScoped<SavedSearchNotificationService>();
 
 builder.Services.AddScoped<PropertySearchService>();
 builder.Services.AddScoped<UserModerationService>();
+builder.Services.AddMemoryCache();
+
+// AI search: free OpenAI-compatible endpoint (Gemini free tier / Ollama),
+// falls back to the built-in rule-based parser when not configured.
+builder.Services.Configure<RealEstateMarketplace.Services.AiSearch.AiSearchOptions>(
+    builder.Configuration.GetSection("AiSearch"));
+builder.Services.AddHttpClient<RealEstateMarketplace.Services.AiSearch.AiSearchService>();
+
+// 10 AI searches per minute per user / IP
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("ai-search", context =>
+        System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
+            context.User.Identity?.Name ?? context.Connection.RemoteIpAddress?.ToString() ?? "anonymous",
+            _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(1)
+            }));
+});
+builder.Services.AddScoped<RealEstateMarketplace.Services.Identity.EmailVerificationService>();
 builder.Services.AddSingleton<RealEstateMarketplace.Services.Payments.DummyPaymentGateway>();
 builder.Services.AddHostedService<RealEstateMarketplace.Services.Payments.PromotionExpiryService>();
 
@@ -129,6 +151,8 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 app.UseRouting();
+
+app.UseRateLimiter();
 
 // Authentication before authorization
 app.UseAuthentication();

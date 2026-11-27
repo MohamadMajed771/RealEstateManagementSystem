@@ -84,6 +84,16 @@
                             </a>
                         </li>
 
+                        <!-- AI SEARCH -->
+                        <li class="nav-item">
+                            <a class="nav-link text-dark"
+                               asp-area=""
+                               asp-controller="AiSearch"
+                               asp-action="Index">
+                                <i class="bi bi-stars me-1 text-primary"></i>AI Search
+                            </a>
+                        </li>
+
                         @if (User.Identity?.IsAuthenticated == true)
                         {
                             <!-- INCOMING REQUESTS -->

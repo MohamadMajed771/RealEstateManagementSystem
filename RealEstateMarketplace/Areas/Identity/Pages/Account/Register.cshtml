@@ -1,4 +1,4 @@
-﻿@page
+@page
 @model RealEstateMarketplace.Areas.Identity.Pages.Account.RegisterModel
 
 @{
@@ -26,6 +26,20 @@
                         <div asp-validation-summary="ModelOnly"
                              class="text-danger mb-3"
                              role="alert"></div>
+
+                        <!-- OPTIONAL: read the name from an ID document (runs in the browser) -->
+                        <div class="border rounded p-3 mb-4 bg-light">
+                            <label for="idScan" class="form-label fw-semibold mb-1">
+                                <i class="bi bi-person-vcard me-1"></i>Fill in from your ID (optional)
+                            </label>
+                            <div class="small text-muted mb-2">
+                                Take or choose a photo of your ID card or passport. The text is read on your
+                                device; the picture is not uploaded or stored. Check the result before registering.
+                            </div>
+                            <!-- no name attribute: the file is never posted to the server -->
+                            <input type="file" id="idScan" accept="image/*" capture="environment" class="form-control form-control-sm" />
+                            <div id="ocrStatus" class="small mt-2" aria-live="polite"></div>
+                        </div>
 
                         <div class="mb-3">
                             <label asp-for="Input.FirstName"
@@ -113,4 +127,6 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <script src="~/js/id-ocr.js" asp-append-version="true"></script>
 }
