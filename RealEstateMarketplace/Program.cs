@@ -71,8 +71,12 @@ var connectionString = builder.Configuration
     ?? throw new InvalidOperationException(
         "Connection string 'DefaultConnection' not found.");
 
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(connectionString));
+builder.Services.AddSingleton<NotificationPushInterceptor>();
+
+builder.Services.AddDbContext<ApplicationDbContext>((sp, options) =>
+    options.UseSqlServer(connectionString)
+        // pushes new notifications live over SignalR after each save
+        .AddInterceptors(sp.GetRequiredService<NotificationPushInterceptor>()));
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
@@ -169,6 +173,7 @@ app.MapStaticAssets();
 // ==========================================
 
 app.MapHub<ChatHub>("/chatHub");
+app.MapHub<NotificationHub>("/hubs/notifications");
 
 // ==========================================
 // MVC ROUTING

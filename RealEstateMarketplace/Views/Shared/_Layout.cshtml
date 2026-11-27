@@ -30,7 +30,7 @@
           href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
 </head>
 
-<body>
+<body data-signed-in="@(User.Identity?.IsAuthenticated == true ? "1" : "")">
 
     <header>
 
@@ -198,6 +198,11 @@
 
     <script src="~/js/site.js"
             asp-append-version="true"></script>
+    @if (User.Identity?.IsAuthenticated == true)
+    {
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
+        <script src="~/js/live-notifications.js" asp-append-version="true"></script>
+    }
 
     @await RenderSectionAsync("Scripts", required: false)
 
