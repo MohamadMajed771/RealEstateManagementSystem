@@ -9,9 +9,13 @@
 <div class="container-xl py-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h2 class="mb-0">Property Reports</h2>
+        <div class="d-flex gap-2">
+        <a class="btn btn-sm btn-outline-success" href="~/Admin/Export/Reports?format=xlsx">Excel</a>
+        <a class="btn btn-sm btn-outline-danger" href="~/Admin/Export/Reports?format=pdf">PDF</a>
         <a class="btn btn-sm btn-outline-secondary" href="?showClosed=@(!showClosed)">
             @(showClosed ? "Show open only" : "Show closed reports too")
         </a>
+        </div>
     </div>
 
     <partial name="_AdminAlerts" />
@@ -37,7 +41,7 @@
                             <span class="badge bg-warning text-dark">@n reports on this listing</span>
                         }
                         <h5 class="mt-2 mb-1">
-                            <a href="@Url.Content($"~/Admin/Listings/Details/{listing.Id}")" class="text-decoration-none">
+                            <a href="@Url.Content($"~/Properties/Details/{listing.Id}")" target="_blank" class="text-decoration-none">
                                 #@listing.Id @listing.Title
                             </a>
                         </h5>

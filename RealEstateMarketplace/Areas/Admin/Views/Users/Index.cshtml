@@ -6,7 +6,13 @@
 }
 
 <div class="container-xl py-4">
-    <h2 class="mb-3">Users</h2>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="mb-0">Users</h2>
+        <div class="d-flex gap-2">
+            <a class="btn btn-sm btn-outline-success" href="~/Admin/Export/Users?format=xlsx">Excel</a>
+            <a class="btn btn-sm btn-outline-danger" href="~/Admin/Export/Users?format=pdf">PDF</a>
+        </div>
+    </div>
     <partial name="_AdminAlerts" />
 
     <form method="get" class="row g-2 mb-3">

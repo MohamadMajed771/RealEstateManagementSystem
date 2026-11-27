@@ -140,6 +140,11 @@
                     Pending Listings
                 </a>
 
+                <a href="@Url.Content("~/Admin/PublishedListings")"
+                   class="@(currentController == "PublishedListings" ? "active" : "")">
+                    All Listings
+                </a>
+
                 <a href="@Url.Content("~/Admin/Reports")"
                    class="@(currentController == "Reports" ? "active" : "")">
                     Reports
