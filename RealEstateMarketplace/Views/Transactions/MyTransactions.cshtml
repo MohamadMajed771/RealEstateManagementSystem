@@ -5,6 +5,7 @@
 @using System.Security.Claims
 @using System.Globalization
 @using RealEstateMarketplace.Models
+@using SharedContracts.Events
 
 @model IEnumerable<Transaction>
 
@@ -19,6 +20,12 @@
         ?? new Dictionary<int, RentalAgreement>();
 
     var today = DateTime.UtcNow.Date;
+
+    var transferRequests =
+        ViewBag.TransferRequests as Dictionary<int, TransferRequest>
+        ?? new Dictionary<int, TransferRequest>();
+
+    var transferServiceUrl = ViewBag.TransferServiceUrl as string;
 }
 
 <div class="container mt-4 mb-5">
@@ -76,7 +83,7 @@
                         <th>Owner</th>
                         <th>Confirmations</th>
                         <th>Transaction Action</th>
-                        <th>Rental Agreement</th>
+                        <th>Rental Agreement / Ownership Transfer</th>
                         <th>Chat</th>
                         <th>Created</th>
                     </tr>
@@ -296,9 +303,98 @@
 
                                 @if (!isRent)
                                 {
-                                    <span class="text-muted">
-                                        Not applicable
-                                    </span>
+                                    transferRequests.TryGetValue(
+                                        transaction.Id,
+                                        out var transferRequest);
+
+                                    bool canRequestTransfer =
+                                        isBuyer &&
+                                        isConfirmed &&
+                                        (transferRequest == null ||
+                                         transferRequest.Status == TransferRequestStatus.Rejected ||
+                                         transferRequest.Status == TransferRequestStatus.Cancelled);
+
+                                    @if (transferRequest != null)
+                                    {
+                                        <div class="mb-1">
+                                            <span class="badge @(transferRequest.Status switch
+                                            {
+                                                TransferRequestStatus.Completed => "bg-success",
+                                                TransferRequestStatus.Rejected => "bg-danger",
+                                                TransferRequestStatus.Cancelled => "bg-danger",
+                                                TransferRequestStatus.Sent => "bg-warning text-dark",
+                                                _ => "bg-info text-dark"
+                                            })">
+                                                @(transferRequest.ExternalStatus != null
+                                                    ? TransferStatusText.Humanize(transferRequest.ExternalStatus)
+                                                    : transferRequest.Status == TransferRequestStatus.Sent
+                                                        ? "Waiting for Transfer Service"
+                                                        : transferRequest.Status.ToString())
+                                            </span>
+                                        </div>
+
+                                        @if (transferRequest.CaseNumber != null)
+                                        {
+                                            <div class="small">
+                                                <strong>Case:</strong>
+                                                @transferRequest.CaseNumber
+                                            </div>
+                                        }
+
+                                        @if (transferRequest.ExternalStatusUpdatedAt != null)
+                                        {
+                                            <div class="small text-muted">
+                                                Updated
+                                                @transferRequest.ExternalStatusUpdatedAt.Value.ToLocalTime().ToString("g")
+                                            </div>
+                                        }
+
+                                        @if (transferRequest.RejectionReason != null)
+                                        {
+                                            <div class="small text-danger">
+                                                @transferRequest.RejectionReason
+                                            </div>
+                                        }
+
+                                        @if (transferRequest.CaseNumber != null &&
+                                             !string.IsNullOrEmpty(transferServiceUrl))
+                                        {
+                                            <a href="@transferServiceUrl"
+                                               target="_blank"
+                                               class="btn btn-outline-primary btn-sm mt-2">
+                                                Open Transfer Service
+                                            </a>
+                                        }
+                                    }
+
+                                    @if (canRequestTransfer)
+                                    {
+                                        <form asp-controller="Transactions"
+                                              asp-action="RequestTransfer"
+                                              method="post"
+                                              class="mt-2">
+
+                                            @Html.AntiForgeryToken()
+
+                                            <input type="hidden"
+                                                   name="id"
+                                                   value="@transaction.Id" />
+
+                                            <button type="submit"
+                                                    class="btn btn-primary btn-sm"
+                                                    onclick="return confirm('Request ownership-transfer assistance for this sale? Your name and email, the seller\'s, and the property details will be sent to the Transfer Service.');">
+                                                Request Ownership Transfer
+                                            </button>
+                                        </form>
+                                    }
+                                    else if (transferRequest == null)
+                                    {
+                                        <span class="text-muted small">
+                                            @(isConfirmed
+                                                ? "Waiting for the buyer to request transfer"
+                                                : "Available after both parties confirm")
+                                        </span>
+                                    }
                                 }
                                 else
                                 {

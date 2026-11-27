@@ -21,6 +21,16 @@ namespace RealEstateMarketplace.Models
         // Reference received from the second application
         public Guid? ExternalTransferCaseId { get; set; }
 
+        // Case number in the Transfer Service, e.g. TR-2026-0001
+        [StringLength(30)]
+        public string? CaseNumber { get; set; }
+
+        // Latest case status received through RabbitMQ
+        [StringLength(100)]
+        public string? ExternalStatus { get; set; }
+
+        public DateTime? ExternalStatusUpdatedAt { get; set; }
+
         [StringLength(1000)]
         public string? RejectionReason { get; set; }
 

@@ -17,7 +17,7 @@ namespace RealEstateMarketplace.Data.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.12")
+                .HasAnnotation("ProductVersion", "10.0.15")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -1322,10 +1322,21 @@ namespace RealEstateMarketplace.Data.Migrations
                     b.Property<DateTime?>("AcknowledgedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CaseNumber")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
                     b.Property<DateTime?>("CompletedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ExternalStatus")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("ExternalStatusUpdatedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<Guid?>("ExternalTransferCaseId")

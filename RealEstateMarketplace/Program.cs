@@ -7,6 +7,8 @@ using RealEstateMarketplace.Data;
 using RealEstateMarketplace.Hubs;
 using RealEstateMarketplace.Models;
 using RealEstateMarketplace.Services;
+using RealEstateMarketplace.Services.Messaging;
+using SharedContracts.Messaging;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,7 +18,19 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddScoped<SavedSearchNotificationService>();
 
-builder.Services.AddSingleton<RabbitMqConnectionService>();
+// ==========================================
+// RABBITMQ (System 1 <-> System 2)
+// ==========================================
+
+// Shared connection + topology (SharedContracts)
+builder.Services.AddRabbitMqMessaging(
+    builder.Configuration, "RealEstateMarketplace");
+
+// Publishes OutboxMessages (e.g. TransferRequested)
+builder.Services.AddHostedService<OutboxPublisherService>();
+
+// Receives case updates from the Transfer Service
+builder.Services.AddHostedService<TransferUpdatesConsumer>();
 
 // ==========================================
 // DATABASE CONNECTION
@@ -62,7 +76,16 @@ builder.Services.AddSignalR();
 // EMAIL AND PHOTO SERVICES
 // ==========================================
 
-builder.Services.AddTransient<IEmailSender, SmtpEmailSender>();
+// Real SMTP when SmtpSettings are configured (user-secrets),
+// otherwise emails are printed to the console (development).
+if (!string.IsNullOrWhiteSpace(builder.Configuration["SmtpSettings:Host"]))
+{
+    builder.Services.AddTransient<IEmailSender, SmtpEmailSender>();
+}
+else
+{
+    builder.Services.AddTransient<IEmailSender, ConsoleEmailSender>();
+}
 
 builder.Services.AddScoped<PropertyPhotoService>();
 
@@ -71,6 +94,9 @@ builder.Services.AddScoped<PropertyPhotoService>();
 // ==========================================
 
 var app = builder.Build();
+
+// Migrations (development), Admin role and optional seeded admin
+await DataSeeder.SeedAsync(app.Services, app.Environment.IsDevelopment());
 
 // ==========================================
 // ERROR HANDLING

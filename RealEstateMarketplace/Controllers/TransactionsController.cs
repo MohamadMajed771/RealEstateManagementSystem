@@ -9,6 +9,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using RealEstateMarketplace.Data;
 using RealEstateMarketplace.Models;
+using RealEstateMarketplace.Services.Messaging;
+using SharedContracts.Events;
 
 namespace RealEstateMarketplace.Controllers
 {
@@ -17,13 +19,16 @@ namespace RealEstateMarketplace.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IConfiguration _configuration;
 
         public TransactionsController(
             ApplicationDbContext context,
-            UserManager<ApplicationUser> userManager)
+            UserManager<ApplicationUser> userManager,
+            IConfiguration configuration)
         {
             _context = context;
             _userManager = userManager;
+            _configuration = configuration;
         }
 
         // ==========================================
@@ -72,6 +77,20 @@ namespace RealEstateMarketplace.Controllers
                     group => group.First());
 
             ViewBag.RentalAgreements = latestAgreements;
+
+            // Latest ownership-transfer request per transaction.
+            var transferRequests = await _context.TransferRequests
+                .AsNoTracking()
+                .Where(r => transactionIds.Contains(r.TransactionId))
+                .OrderByDescending(r => r.CreatedAt)
+                .ToListAsync();
+
+            ViewBag.TransferRequests = transferRequests
+                .GroupBy(r => r.TransactionId)
+                .ToDictionary(g => g.Key, g => g.First());
+
+            ViewBag.TransferServiceUrl =
+                _configuration["TransferService:BaseUrl"];
 
             return View(transactions);
         }
@@ -161,5 +180,133 @@ namespace RealEstateMarketplace.Controllers
 
             return RedirectToAction(nameof(MyTransactions));
         }
+
+        // ==========================================
+        // REQUEST OWNERSHIP TRANSFER (SALE ONLY)
+        // ==========================================
+        //
+        // Saves the TransferRequest and a TransferRequested
+        // outbox message in the same database transaction.
+        // OutboxPublisherService then sends it to RabbitMQ.
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RequestTransfer(int id)
+        {
+            var userId = _userManager.GetUserId(User);
+
+            if (string.IsNullOrEmpty(userId))
+                return Challenge();
+
+            var transaction = await _context.Transactions
+                .Include(t => t.PropertyListing)
+                    .ThenInclude(l => l.Property)
+                .Include(t => t.Buyer)
+                .Include(t => t.Seller)
+                .FirstOrDefaultAsync(t => t.Id == id);
+
+            if (transaction == null)
+                return NotFound();
+
+            if (transaction.BuyerId != userId)
+                return Forbid();
+
+            if (transaction.TransactionType != ListingType.Sale)
+            {
+                TempData["Error"] =
+                    "Ownership transfer is only available for sales.";
+                return RedirectToAction(nameof(MyTransactions));
+            }
+
+            if (transaction.Status != TransactionStatus.Confirmed ||
+                !transaction.BuyerConfirmed ||
+                !transaction.SellerConfirmed)
+            {
+                TempData["Error"] =
+                    "Both buyer and seller must confirm the sale first.";
+                return RedirectToAction(nameof(MyTransactions));
+            }
+
+            bool alreadyRequested = await _context.TransferRequests
+                .AnyAsync(r =>
+                    r.TransactionId == id &&
+                    r.Status != TransferRequestStatus.Cancelled &&
+                    r.Status != TransferRequestStatus.Rejected);
+
+            if (alreadyRequested)
+            {
+                TempData["Error"] =
+                    "An ownership-transfer request already exists for this sale.";
+                return RedirectToAction(nameof(MyTransactions));
+            }
+
+            var now = DateTime.UtcNow;
+            var property = transaction.PropertyListing.Property;
+
+            var request = new TransferRequest
+            {
+                TransactionId = transaction.Id,
+                Status = TransferRequestStatus.Sent,
+                CreatedAt = now,
+                SentAt = now
+            };
+
+            transaction.Status = TransactionStatus.TransferRequested;
+            transaction.TransferRequestId = request.Id;
+            transaction.TransferRequestedAt = now;
+            transaction.UpdatedAt = now;
+
+            _context.TransferRequests.Add(request);
+
+            // Only the information System 2 needs.
+            Outbox.Add(_context, new TransferRequested
+            {
+                TransferRequestId = request.Id,
+                MarketplaceTransactionId = transaction.Id,
+                MarketplacePropertyListingId = transaction.PropertyListingId,
+                PropertyTitle = transaction.PropertyListing.Title,
+                PropertyType = property.Type.ToString(),
+                Country = property.Country,
+                City = property.City,
+                Area = property.Area,
+                StreetAddress = property.StreetAddress,
+                SizeSquareMeters = property.SizeSquareMeters,
+                AgreedPrice = transaction.AgreedPrice,
+                Currency = transaction.Currency,
+                Buyer = ToParty(transaction.Buyer),
+                Seller = ToParty(transaction.Seller)
+            });
+
+            _context.Notifications.Add(new Notification
+            {
+                UserId = transaction.SellerId,
+                Title = "Ownership transfer requested",
+                Message =
+                    $"The buyer requested ownership-transfer assistance for " +
+                    $"'{transaction.PropertyListing.Title}'. You will be notified " +
+                    "when the Transfer Service opens the case.",
+                Type = NotificationType.TransferStatusChanged,
+                RelatedEntityId = transaction.Id,
+                RelatedEntityType = "Transaction",
+                ActionUrl = "/Transactions/MyTransactions",
+                CreatedAt = now
+            });
+
+            await _context.SaveChangesAsync();
+
+            TempData["Success"] =
+                "Ownership-transfer request sent. You will be notified " +
+                "when the Transfer Service creates your case.";
+
+            return RedirectToAction(nameof(MyTransactions));
+        }
+
+        private static TransferParty ToParty(ApplicationUser user) => new()
+        {
+            MarketplaceUserId = user.Id,
+            FullName = $"{user.FirstName} {user.LastName}".Trim(),
+            Email = user.Email ?? string.Empty,
+            PhoneNumber = user.PhoneNumber
+        };
     }
 }
